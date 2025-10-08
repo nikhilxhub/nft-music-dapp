@@ -1,1 +1,1 @@
-{"root":["./src/index.ts"],"version":"5.9.2"}
+{"root":["./src/index.ts","./src/models/song.ts","./src/models/streamlog.ts","./src/routes/song.routes.ts","./src/services/helius.ts","./src/services/ipfs.ts"],"version":"5.9.2"}
