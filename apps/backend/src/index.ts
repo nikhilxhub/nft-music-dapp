@@ -23,15 +23,15 @@ app.use(express.urlencoded({ extended: true }));
 const PORT = process.env.PORT || 3001;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI as string).then(() => {
-  console.log('MongoDB connected');
+// mongoose.connect(process.env.MONGO_URI as string).then(() => {
+//   console.log('MongoDB connected');
 
-}).catch((err) => {
+// }).catch((err) => {
 
-  console.error('MongoDB failed', err);
-  process.exit(1);
+//   console.error('MongoDB failed', err);
+//   process.exit(1);
 
-});
+// });
 
 /**
  * Health check
@@ -97,7 +97,7 @@ app.post('/webhook/helius', async (req: Request, res: Response) => {
     }
 
     const payload = req.body;
-    await processWebhook(payload);
+    // await processWebhook(payload);
     res.status(200).send('ok');
   } catch (err: any) {
     console.error('webhook error', err);
