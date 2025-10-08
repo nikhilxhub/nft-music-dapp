@@ -9,6 +9,7 @@ import { uploadFileToIpfs } from './services/ipfs';
 import { processWebhook } from './services/helius';
 import Song from './models/Song';
 import StreamLog from './models/StreamLog';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -22,16 +23,15 @@ app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3001;
 
-// Connect to MongoDB
-// mongoose.connect(process.env.MONGO_URI as string).then(() => {
-//   console.log('MongoDB connected');
+mongoose.connect(process.env.MONGO_URI as string).then(() => {
+  console.log('MongoDB connected');
 
-// }).catch((err) => {
+}).catch((err) => {
 
-//   console.error('MongoDB failed', err);
-//   process.exit(1);
+  console.error('MongoDB failed', err);
+  process.exit(1);
 
-// });
+});
 
 /**
  * Health check
@@ -97,7 +97,7 @@ app.post('/webhook/helius', async (req: Request, res: Response) => {
     }
 
     const payload = req.body;
-    // await processWebhook(payload);
+    await processWebhook(payload);
     res.status(200).send('ok');
   } catch (err: any) {
     console.error('webhook error', err);
@@ -113,10 +113,72 @@ app.get('/songs', async (_req: Request, res: Response) => {
   res.json(songs);
 });
 
-app.get('/streams', async (_req: Request, res: Response) => {
-  const logs = await StreamLog.find().sort({ timestamp: -1 }).limit(200);
-  res.json(logs);
+app.get('/streams', async (req: Request, res: Response) => {
+  try {
+    const { payer, destination } = req.query;
+
+    const filter: any = {};
+    if (payer) {
+      filter.payer = payer as string;
+    }
+    if (destination) {
+      filter.destination = destination as string;
+    }
+
+    const logs = await StreamLog.find(filter).sort({ timestamp: -1 }).limit(200);
+    res.json(logs);
+  } catch (err: any) {
+    console.error('Error fetching streams:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
+
+
+
+app.get('/user-assets', async (req: Request, res: Response) => {
+  try {
+    const { owner } = req.query;
+    if (!owner) {
+      return res.status(400).json({ error: 'Owner address is required' });
+    }
+
+    const heliusRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`;
+
+    // STEP 1: Fetch ALL asset data from Helius
+    const { data } = await axios.post(heliusRpcUrl, {
+      jsonrpc: '2.0',
+      id: 'my-id',
+      method: 'getAssetsByOwner',
+      params: {
+        ownerAddress: owner as string,
+        page: 1,
+        limit: 1000, // Fetch a larger list to check against
+      },
+    });
+
+    if (!data.result || !data.result.items) {
+      return res.json([]); // Return empty array if user has no assets
+    }
+
+    // Extract just the mint addresses from the Helius response
+    const userNftMints = data.result.items.map((asset: any) => asset.id);
+
+    // STEP 2: Filter these mints against YOUR database
+    // Use the `$in` operator to find all songs that match any of the mints in the user's wallet.
+    // This is much more efficient than looping and querying one by one.
+    const platformSongsOwnedByUser = await Song.find({
+      mint: { $in: userNftMints },
+    });
+
+    // STEP 3: Return only the songs that are part of your platform
+    res.json(platformSongsOwnedByUser);
+
+  } catch (err: any) {
+    console.error('Error fetching user assets:', err);
+    res.status(500).json({ error: 'Failed to fetch assets' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Backend listening on http://localhost:${PORT}`);
