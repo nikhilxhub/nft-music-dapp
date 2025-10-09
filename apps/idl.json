@@ -1,0 +1,205 @@
+{
+  "address": "Agrs9TL5rz7jr4A9WYjkUmDw9J5YDMSHRnr5TLS8wfdz",
+  "metadata": {
+    "name": "music_streaming",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "initialize_song",
+      "docs": [
+        "Initialize a SongConfig PDA.",
+        "curator_share_bps: basis points (e.g., 2000 = 20.00%)"
+      ],
+      "discriminator": [
+        164,
+        29,
+        253,
+        225,
+        80,
+        97,
+        138,
+        78
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "song",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "artist"
+        },
+        {
+          "name": "curator"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "curator_share_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "log_stream",
+      "docs": [
+        "Log a paid stream: transfers lamports from payer to artist/curator (split by curator_share_bps),",
+        "and increments stream_count."
+      ],
+      "discriminator": [
+        141,
+        255,
+        109,
+        30,
+        241,
+        240,
+        253,
+        105
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "song",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "song.mint",
+                "account": "SongConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "artist",
+          "writable": true
+        },
+        {
+          "name": "curator",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "SongConfig",
+      "discriminator": [
+        2,
+        152,
+        241,
+        148,
+        215,
+        226,
+        14,
+        177
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidArtist",
+      "msg": "Invalid artist account"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidCurator",
+      "msg": "Invalid curator account"
+    },
+    {
+      "code": 6002,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "SongConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "artist",
+            "type": "pubkey"
+          },
+          {
+            "name": "curator",
+            "type": "pubkey"
+          },
+          {
+            "name": "curator_share_bps",
+            "type": "u16"
+          },
+          {
+            "name": "stream_count",
+            "type": "u64"
+          },
+          {
+            "name": "last_stream_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

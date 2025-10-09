@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink } from "lucide-react";
 import { NavBar } from "../MyComponents/NavBar";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // --- Data Types ---
 // Matches your StreamLog Mongoose schema
@@ -100,7 +102,13 @@ export default function ProfilePage() {
     <>
       <NavBar />
       <div className="container py-8">
+
+
         <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+        <Link href= "/upload">
+        
+        <Button>Upload song</Button>
+        </Link>
         <Tabs defaultValue="streams" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="streams">My Streams ({loading ? '...' : streamHistory.length})</TabsTrigger>
@@ -190,6 +198,8 @@ export default function ProfilePage() {
             </>
           )}
         </Tabs>
+
+
       </div>
     </>
   );

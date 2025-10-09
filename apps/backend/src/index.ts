@@ -22,16 +22,21 @@ app.use(express.urlencoded({ extended: true }));
 
 
 const PORT = process.env.PORT || 3001;
+const db = process.env.MONGO_URI as string;
 
-mongoose.connect(process.env.MONGO_URI as string).then(() => {
-  console.log('MongoDB connected');
+console.log(db);
 
-}).catch((err) => {
 
-  console.error('MongoDB failed', err);
-  process.exit(1);
 
-});
+// mongoose.connect(process.env.MONGO_URI as string).then(() => {
+//   console.log('MongoDB connected');
+
+// }).catch((err) => {
+
+//   console.error('MongoDB failed', err);
+//   process.exit(1);
+
+// });
 
 /**
  * Health check
