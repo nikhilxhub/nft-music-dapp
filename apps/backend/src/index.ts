@@ -11,6 +11,9 @@ import Song from './models/Song';
 import StreamLog from './models/StreamLog';
 import axios from 'axios';
 
+import pinataSDK from '@pinata/sdk'; 
+
+
 dotenv.config();
 
 const app = express();
@@ -28,15 +31,15 @@ console.log(db);
 
 
 
-// mongoose.connect(process.env.MONGO_URI as string).then(() => {
-//   console.log('MongoDB connected');
+mongoose.connect(process.env.MONGO_URI as string).then(() => {
+  console.log('MongoDB connected');
 
-// }).catch((err) => {
+}).catch((err) => {
 
-//   console.error('MongoDB failed', err);
-//   process.exit(1);
+  console.error('MongoDB failed', err);
+  process.exit(1);
 
-// });
+});
 
 /**
  * Health check
@@ -147,7 +150,7 @@ app.get('/user-assets', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Owner address is required' });
     }
 
-    const heliusRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`;
+    const heliusRpcUrl = `https://devnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`;
 
     // STEP 1: Fetch ALL asset data from Helius
     const { data } = await axios.post(heliusRpcUrl, {
@@ -181,6 +184,45 @@ app.get('/user-assets', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error fetching user assets:', err);
     res.status(500).json({ error: 'Failed to fetch assets' });
+  }
+});
+
+
+
+
+
+// ... after your other app.use() lines
+const pinata = new pinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_KEY);
+
+
+app.post('/upload-metadata', async (req: Request, res: Response) => {
+  try {
+    const metadata = req.body; // The JSON from your frontend
+
+    if (!metadata) {
+      return res.status(400).json({ error: 'Missing metadata JSON body' });
+    }
+
+    const options = {
+      pinataMetadata: {
+        name: metadata.name || 'Song Metadata', // Give it a name for your Pinata account
+      },
+    };
+
+    // Use the SDK to "pin" the JSON to IPFS
+    const result = await pinata.pinJSONToIPFS(metadata, options);
+    
+    // The result contains the IpfsHash (this is the CID or "tracking number")
+    const { IpfsHash } = result;
+
+    // Construct the full URL that the NFT needs
+    const metadataUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
+
+    return res.json({ success: true, metadataUrl: metadataUrl });
+
+  } catch (err: any) {
+    console.error('Metadata upload error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
