@@ -221,8 +221,168 @@ export default function UploadPage() {
   //   }
   // };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+//   const handleSubmit = async (e: React.FormEvent) => {
+//   e.preventDefault();
+//   if (!file || !wallet.publicKey || !wallet.signTransaction) {
+//     toast.error("Please connect your wallet and select a file.");
+//     return;
+//   }
+//   if (!curator) {
+//     toast.error("Please enter a curator wallet address.");
+//     return;
+//   }
+
+//   setIsLoading(true);
+
+//   try {
+//     // --- STEP 1: Upload audio ---
+//     setProgress(10);
+//     setProgressText("Uploading audio file...");
+//     const formData = new FormData();
+//     formData.append("file", file);
+
+//     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+//     const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
+//     if (!uploadRes.ok) throw new Error("Audio upload failed");
+
+//     const { url: audioUrl, cid: audioCid } = await uploadRes.json();
+//     console.log("Audio uploaded:", audioUrl);
+
+//     // --- STEP 2: Upload metadata ---
+//     setProgress(25);
+//     setProgressText("Uploading metadata...");
+
+//     const metadata = {
+//       name: title,
+//       symbol: "MUSIC",
+//       description: `A song by ${wallet.publicKey.toBase58()}`,
+//       image: imageUrl,
+//       animation_url: audioUrl,
+//       properties: {
+//         files: [{ uri: audioUrl, type: file.type }],
+//         category: "audio",
+//       },
+//     };
+
+//     const metadataRes = await fetch(`${API_BASE_URL}/upload-metadata`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(metadata),
+//     });
+//     if (!metadataRes.ok) throw new Error("Metadata upload failed");
+
+//     const { metadataUrl } = await metadataRes.json();
+//     console.log("Metadata uploaded:", metadataUrl);
+
+//     // --- STEP 3: Mint NFT ---
+//     setProgress(50);
+//     setProgressText("Preparing mint transaction...");
+
+//     const reliableRpcEndpoint = "https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c";
+//     const umi = createUmi(reliableRpcEndpoint)
+//       .use(walletAdapterIdentity(wallet))
+//       .use(mplTokenMetadata());
+
+//     const mint = generateSigner(umi);
+
+//     let createNftTx = createNft(umi, {
+//       mint,
+//       name: metadata.name,
+//       uri: metadataUrl,
+//       sellerFeeBasisPoints: percentAmount(5.5),
+//       isCollection: false,
+//     });
+
+//     createNftTx = createNftTx
+//       .add(setComputeUnitLimit(umi, { units: 400_000 }))
+//       .add(setComputeUnitPrice(umi, { microLamports: 50_000 }));
+
+//     setProgressText("Waiting for you to approve the mint transaction...");
+//     await createNftTx.sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+
+//     const mintAddress = mint.publicKey.toString();
+//     console.log("NFT Minted:", mintAddress);
+//     toast("NFT Minted!", { description: `Mint address: ${mintAddress}` });
+
+//     // --- STEP 4: Register song with Anchor program ---
+//     setProgress(75);
+//     setProgressText("Registering song with our program...");
+
+//     const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
+//     const program = new anchor.Program(idl as anchor.Idl, provider);
+
+//     const [songPda] = PublicKey.findProgramAddressSync(
+//       [Buffer.from("song"), new PublicKey(mintAddress).toBuffer()],
+//       program.programId
+//     );
+
+//     // ✅ FIX: Build a fresh transaction every time
+//     const latestBlockhash = await connection.getLatestBlockhash();
+//     //@ts-ignore
+//     const initializeTx = await program.methods
+//       .initializeSong(curatorShare * 100)
+//       .accounts({
+//         payer: wallet.publicKey,
+//         song: songPda,
+//         mint: new PublicKey(mintAddress),
+//         artist: wallet.publicKey,
+//         curator: new PublicKey(curator),
+//         systemProgram: SystemProgram.programId,
+//       })
+//       .transaction();
+
+//     initializeTx.recentBlockhash = latestBlockhash.blockhash;
+//     initializeTx.feePayer = wallet.publicKey;
+
+//     initializeTx.instructions.unshift(
+//       anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 })
+//     );
+
+//     const signedTx = await wallet.signTransaction(initializeTx);
+//     const txSignature = await connection.sendRawTransaction(signedTx.serialize());
+
+//     await connection.confirmTransaction(
+//       {
+//         signature: txSignature,
+//         blockhash: latestBlockhash.blockhash,
+//         lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+//       },
+//       "confirmed"
+//     );
+
+//     console.log("Song registered on-chain.");
+//     toast("Song Registered!", { description: "Your song is now on the blockchain." });
+
+//     // --- STEP 5: Save to backend ---
+//     setProgress(90);
+//     setProgressText("Finalizing and saving to database...");
+//     await fetch(`${API_BASE_URL}/init-song`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//         mint: mintAddress,
+//         artist: wallet.publicKey.toBase58(),
+//         curator,
+//         curatorShareBps: curatorShare * 100,
+//         ipfsAudioCid: audioCid,
+//         metadataUri: metadataUrl,
+//       }),
+//     });
+
+//     setProgress(100);
+//     setProgressText("Upload complete!");
+//   } catch (error: any) {
+//     console.error("Upload process failed:", error);
+//     toast.error("Upload Failed", { description: error.message });
+//     setProgress(0);
+//   } finally {
+//     setIsLoading(false);
+//   }
+// };
+
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+
   if (!file || !wallet.publicKey || !wallet.signTransaction) {
     toast.error("Please connect your wallet and select a file.");
     return;
@@ -233,23 +393,26 @@ export default function UploadPage() {
   }
 
   setIsLoading(true);
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   try {
-    // --- STEP 1: Upload audio ---
+    /* ---------------------- STEP 1: Upload audio ---------------------- */
     setProgress(10);
     setProgressText("Uploading audio file...");
+
     const formData = new FormData();
     formData.append("file", file);
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-    const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
+    const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+      method: "POST",
+      body: formData,
+    });
     if (!uploadRes.ok) throw new Error("Audio upload failed");
 
     const { url: audioUrl, cid: audioCid } = await uploadRes.json();
-    console.log("Audio uploaded:", audioUrl);
+    console.log("🎵 Audio uploaded:", audioUrl);
 
-    // --- STEP 2: Upload metadata ---
-    setProgress(25);
+    /* ---------------------- STEP 2: Upload metadata ---------------------- */
+    setProgress(30);
     setProgressText("Uploading metadata...");
 
     const metadata = {
@@ -272,11 +435,16 @@ export default function UploadPage() {
     if (!metadataRes.ok) throw new Error("Metadata upload failed");
 
     const { metadataUrl } = await metadataRes.json();
-    console.log("Metadata uploaded:", metadataUrl);
+    console.log("🪶 Metadata uploaded:", metadataUrl);
 
-    // --- STEP 3: Mint NFT ---
-    setProgress(50);
-    setProgressText("Preparing mint transaction...");
+    /* ---------------------- STEP 3: Mint NFT via UMI ---------------------- */
+    setProgress(55);
+    setProgressText("Minting NFT...");
+
+    // const reliableRpcEndpoint =
+    //   "https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c";
+
+      const reliableRpcEndpoint = "https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c";
 
     const umi = createUmi(reliableRpcEndpoint)
       .use(walletAdapterIdentity(wallet))
@@ -290,24 +458,25 @@ export default function UploadPage() {
       uri: metadataUrl,
       sellerFeeBasisPoints: percentAmount(5.5),
       isCollection: false,
-    });
-
-    createNftTx = createNftTx
-      .add(setComputeUnitLimit(umi, { units: 400_000 }))
+    })
+      .add(setComputeUnitLimit(umi, { units: 350_000 }))
       .add(setComputeUnitPrice(umi, { microLamports: 50_000 }));
 
-    setProgressText("Waiting for you to approve the mint transaction...");
-    await createNftTx.sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+    await createNftTx.sendAndConfirm(umi, {
+      confirm: { commitment: "confirmed" },
+    });
 
     const mintAddress = mint.publicKey.toString();
-    console.log("NFT Minted:", mintAddress);
-    toast("NFT Minted!", { description: `Mint address: ${mintAddress}` });
+    console.log("✅ NFT Minted:", mintAddress);
+    toast("NFT Minted!", { description: mintAddress });
 
-    // --- STEP 4: Register song with Anchor program ---
-    setProgress(75);
-    setProgressText("Registering song with our program...");
+    /* ---------------------- STEP 4: Register on Anchor Program ---------------------- */
+    setProgress(80);
+    setProgressText("Registering song on-chain...");
 
-    const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
+    const provider = new anchor.AnchorProvider(connection, wallet as any, {
+      commitment: "confirmed",
+    });
     const program = new anchor.Program(idl as anchor.Idl, provider);
 
     const [songPda] = PublicKey.findProgramAddressSync(
@@ -315,10 +484,21 @@ export default function UploadPage() {
       program.programId
     );
 
-    // ✅ FIX: Build a fresh transaction every time
-    const latestBlockhash = await connection.getLatestBlockhash();
+    // check if PDA already exists to avoid "already in use"
+    const existing = await connection.getAccountInfo(songPda);
+    if (existing) {
+      toast("Song already registered on-chain!");
+      setProgress(100);
+      setProgressText("Already initialized.");
+      setIsLoading(false);
+      return;
+    }
+
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash("finalized");
+
     //@ts-ignore
-    const initializeTx = await program.methods
+    const initializeIx = await program.methods
       .initializeSong(curatorShare * 100)
       .accounts({
         payer: wallet.publicKey,
@@ -328,33 +508,37 @@ export default function UploadPage() {
         curator: new PublicKey(curator),
         systemProgram: SystemProgram.programId,
       })
-      .transaction();
+      .instruction();
 
-    initializeTx.recentBlockhash = latestBlockhash.blockhash;
-    initializeTx.feePayer = wallet.publicKey;
+    const computeIx = anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: 50_000,
+    });
 
-    initializeTx.instructions.unshift(
-      anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 })
+    const tx = new anchor.web3.Transaction({
+      recentBlockhash: blockhash,
+      feePayer: wallet.publicKey,
+    }).add(computeIx, initializeIx);
+
+    const signedTx = await wallet.signTransaction(tx);
+    const rawTx = signedTx.serialize();
+    const txSig = await connection.sendRawTransaction(rawTx, {
+      skipPreflight: false,
+      maxRetries: 2,
+    });
+
+    const confirmation = await connection.confirmTransaction(
+      { signature: txSig, blockhash, lastValidBlockHeight },
+      "finalized"
     );
+    if (confirmation.value.err) throw new Error("Transaction failed");
 
-    const signedTx = await wallet.signTransaction(initializeTx);
-    const txSignature = await connection.sendRawTransaction(signedTx.serialize());
+    console.log("✅ Song registered:", txSig);
+    toast("Song Registered!", { description: "Your song is now on-chain." });
 
-    await connection.confirmTransaction(
-      {
-        signature: txSignature,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      },
-      "confirmed"
-    );
+    /* ---------------------- STEP 5: Save to backend ---------------------- */
+    setProgress(95);
+    setProgressText("Saving to database...");
 
-    console.log("Song registered on-chain.");
-    toast("Song Registered!", { description: "Your song is now on the blockchain." });
-
-    // --- STEP 5: Save to backend ---
-    setProgress(90);
-    setProgressText("Finalizing and saving to database...");
     await fetch(`${API_BASE_URL}/init-song`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -365,19 +549,24 @@ export default function UploadPage() {
         curatorShareBps: curatorShare * 100,
         ipfsAudioCid: audioCid,
         metadataUri: metadataUrl,
+        txSig,
       }),
     });
 
     setProgress(100);
     setProgressText("Upload complete!");
-  } catch (error: any) {
-    console.error("Upload process failed:", error);
-    toast.error("Upload Failed", { description: error.message });
+    toast.success("🎉 Song successfully uploaded!");
+  } catch (err: any) {
+    console.error("❌ Upload failed:", err);
+    toast.error("Upload Failed", { description: err.message });
     setProgress(0);
   } finally {
     setIsLoading(false);
   }
 };
+
+
+
 
 
   return (

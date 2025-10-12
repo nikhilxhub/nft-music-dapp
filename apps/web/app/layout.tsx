@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { WalletContextProvider } from "providers/WalletContextProvider";
 import { Toaster } from "@/components/ui/sonner";
-
+import { ThemeProvider } from "@/components/theme-provider"
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -24,8 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable}`} >
+      <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+
 
         <WalletContextProvider>
 
@@ -34,6 +41,7 @@ export default function RootLayout({
           {children}
 
         </WalletContextProvider>
+</ThemeProvider>
       </body>
     </html>
   );

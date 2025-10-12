@@ -15,6 +15,7 @@ import {
 import { LogOut, Upload, User, User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { ModeToggle } from "@/components/ui/ModeToggle";
 
 
 // Helper function to truncate wallet address
@@ -87,6 +88,8 @@ export function NavBar() {
             // --- UNCONNECTED STATE ---
             <WalletMultiButton style={{}} />
           )}
+
+            <ModeToggle />
         </div>
       </div>
     </header>
