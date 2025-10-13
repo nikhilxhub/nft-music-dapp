@@ -14,7 +14,7 @@ import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-ad
 import { createNft, mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata';
 import { publicKey as umiPublicKey, generateSigner, percentAmount } from '@metaplex-foundation/umi';
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey, sendAndConfirmTransaction, SystemProgram } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, SystemProgram } from "@solana/web3.js";
 import idl from "@/../idl.json"; // Make sure your IDL is accessible
 import { NavBar } from "../MyComponents/NavBar";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ export default function UploadPage() {
   const [progressText, setProgressText] = useState('');
 
   const [imageUrl, setImageUrl] = useState('');
+  const [streamPrice, setStreamPrice] = useState(0.001); 
 
 
   // const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
@@ -51,222 +52,247 @@ export default function UploadPage() {
   };
 
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!file || !wallet.publicKey || !wallet.signTransaction) {
-    toast.error("Please connect your wallet and select a file.");
-    return;
-  }
-  if (!curator) {
-    toast.error("Please enter a curator wallet address.");
-    return;
-  }
-
-  setIsLoading(true);
-  setProgress(0);
-  setProgressText("Starting upload...");
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-  try {
-    /* ---------------------- STEP 1: Upload audio ---------------------- */
-    setProgress(10);
-    setProgressText("Uploading audio file...");
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
-    if (!uploadRes.ok) throw new Error("Audio upload failed");
-
-    const { url: audioUrl, cid: audioCid } = await uploadRes.json();
-    console.log("🎵 Audio uploaded:", audioUrl);
-
-    /* ---------------------- STEP 2: Upload metadata ---------------------- */
-    setProgress(30);
-    setProgressText("Uploading metadata...");
-
-    const metadata = {
-      name: title,
-      symbol: "MUSIC",
-      description: `A song by ${wallet.publicKey.toBase58()}`,
-      image: imageUrl,
-      animation_url: audioUrl,
-      properties: { files: [{ uri: audioUrl, type: file.type }], category: "audio" },
-    };
-
-    const metadataRes = await fetch(`${API_BASE_URL}/upload-metadata`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(metadata),
-    });
-    if (!metadataRes.ok) throw new Error("Metadata upload failed");
-
-    const { metadataUrl } = await metadataRes.json();
-    console.log("🪶 Metadata uploaded:", metadataUrl);
-
-    /* ---------------------- STEP 3: Mint NFT via UMI ---------------------- */
-    setProgress(55);
-    setProgressText("Minting NFT on Solana...");
-
-    const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
-      .use(walletAdapterIdentity(wallet))
-      .use(mplTokenMetadata());
-
-    const mint = generateSigner(umi);
-
-    let createNftTx = createNft(umi, {
-      mint,
-      name: metadata.name,
-      uri: metadataUrl,
-      sellerFeeBasisPoints: percentAmount(5.5),
-      isCollection: false,
-    })
-      .add(setComputeUnitLimit(umi, { units: 350_000 }))
-      .add(setComputeUnitPrice(umi, { microLamports: 50_000 }));
-
-    await createNftTx.sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
-    const mintAddress = mint.publicKey.toString();
-    console.log("✅ NFT Minted:", mintAddress);
-    toast.success("NFT Minted!", { description: mintAddress });
-
-    /* ---------------------- STEP 4: Register song on-chain ---------------------- */
-    setProgress(75);
-    setProgressText("Registering song on-chain...");
-
-    const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
-    // Create the Anchor Program (provider-based). The IDL should contain the program id.
-    const program = new anchor.Program(idl as anchor.Idl, provider as any);
-
-    const [songPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("song"), new PublicKey(mintAddress).toBuffer()],
-      program.programId
-    );
-
-    // Check if song is already registered by querying the account directly.
-    // Using `connection.getAccountInfo` avoids depending on Anchor's account parsers
-    // and reduces race conditions where fetchNullable may return null while the
-    // account is allocated but not parsable yet.
-    const existingAccount = await connection.getAccountInfo(songPda);
-    if (existingAccount) {
-      toast("Song already registered!", { description: "This mint is already linked on-chain." });
-      setProgress(100);
-      setProgressText("Already registered!");
-      setIsLoading(false);
+    if (!file || !wallet.publicKey || !wallet.signTransaction) {
+      toast.error("Please connect your wallet and select a file.");
+      return;
+    }
+    if (!curator) {
+      toast.error("Please enter a curator wallet address.");
       return;
     }
 
-        // Build the initialize instruction
-        // @ts-ignore
-        const initializeIx = await program.methods
-          .initializeSong(curatorShare * 100)
-          .accounts({
-            payer: wallet.publicKey,
-            song: songPda,
-            mint: new PublicKey(mintAddress),
-            artist: wallet.publicKey,
-            curator: new PublicKey(curator),
-            systemProgram: SystemProgram.programId,
-          })
-          .instruction();
-
-        // Submit the transaction with retries to handle transient "blockhash expired" issues
-        const maxAttempts = 3;
-        let txSig: string | null = null;
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          try {
-            const latestBlockhash = await connection.getLatestBlockhash("confirmed");
-
-            const tx = new anchor.web3.Transaction({
-              recentBlockhash: latestBlockhash.blockhash,
-              feePayer: wallet.publicKey!,
-            });
-
-            tx.add(
-              anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 350_000 }),
-              anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }),
-              initializeIx
-            );
-
-            // Ask the wallet to sign the transaction (fresh recentBlockhash each attempt)
-            const signedTx = await wallet.signTransaction!(tx);
-
-            txSig = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false });
-
-            // Confirm it (use the blockhash info we just fetched)
-            await connection.confirmTransaction(
-              {
-                signature: txSig,
-                blockhash: latestBlockhash.blockhash,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-              },
-              "confirmed"
-            );
-
-            console.log("✅ Song registered:", txSig);
-            toast.success("Song Registered!", { description: txSig });
-            break; // success
-          } catch (err: any) {
-            console.error(`initializeSong attempt ${attempt + 1} failed:`, err);
-
-            const msg = (err && err.toString && err.toString()) || '';
-
-            // If the error indicates allocation/already-processed, check on-chain
-            // for the PDA and treat it as success if present.
-            if (msg.includes('already in use') || msg.includes('account already initialized') || msg.includes('already exists') || msg.includes('already been processed') || msg.includes('already processed')) {
-              try {
-                const existsNow = await connection.getAccountInfo(songPda);
-                if (existsNow) {
-                  txSig = txSig || 'already-registered';
-                  console.log('Song already registered on-chain (detected after tx failure). Treating as success.');
-                  break;
-                }
-              } catch (e) {
-                // ignore and continue to retry
-              }
-            }
-
-            // For blockhash/expired related errors, retry after a short delay
-            if (attempt < maxAttempts - 1) {
-              await new Promise((r) => setTimeout(r, 500));
-              continue;
-            }
-
-            // Give up and rethrow the error to be handled by outer catch
-            throw err;
-          }
-        }
-
-    /* ---------------------- STEP 5: Save to backend ---------------------- */
-    setProgress(95);
-    setProgressText("Saving song to database...");
-
-    await fetch(`${API_BASE_URL}/init-song`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mint: mintAddress,
-        artist: wallet.publicKey.toBase58(),
-        curator,
-        curatorShareBps: curatorShare * 100,
-        ipfsAudioCid: audioCid,
-        metadataUri: metadataUrl,
-        txSig,
-      }),
-    });
-
-    setProgress(100);
-    setProgressText("🎉 Upload complete!");
-    toast.success("Song successfully uploaded!");
-  } catch (error: any) {
-    console.error("❌ Upload failed:", error);
-    if (error.logs) console.log("Logs:", error.logs);
-    toast.error("Upload Failed", { description: error.message });
+    setIsLoading(true);
     setProgress(0);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setProgressText("Starting upload...");
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+    try {
+      /* ---------------------- STEP 1: Upload audio ---------------------- */
+      setProgress(10);
+      setProgressText("Uploading audio to IPFS...");
+
+      const audioFormData = new FormData();
+      audioFormData.append("file", file);
+
+      const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+        method: "POST",
+        body: audioFormData,
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || "Audio upload failed");
+      }
+
+      // ✅ --- THE FIX IS HERE ---
+      // Expect `url` and `cid` from the backend, but rename them to
+      // `audioUrl` and `audioCid` for the rest of the function to use.
+const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
+
+      // This check will now pass successfully
+      if (!audioUrl || !audioCid) {
+        throw new Error("Failed to get URL and CID from audio upload response.");
+      }
+      console.log("✅ Audio uploaded to IPFS:", audioUrl);
+
+      /* ---------------------- STEP 2: Construct and Upload Metadata ---------------------- */
+      setProgress(30);
+      setProgressText("Uploading metadata to IPFS...");
+
+      // ✅ --- FIX #2: Create metadata AFTER you have the public audioUrl ---
+      const metadata = {
+        name: title,
+        symbol: "MUSIC",
+        description: `A song by ${wallet.publicKey.toBase58()}`,
+        image: imageUrl, // Using the URL from the form
+        animation_url: audioUrl, // Using the REAL IPFS URL
+        properties: {
+          files: [{ uri: audioUrl, type: file.type }],
+          category: "audio",
+        },
+      };
+
+      const metadataRes = await fetch(`${API_BASE_URL}/upload-metadata`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(metadata),
+      });
+
+      if (!metadataRes.ok) {
+        throw new Error("Metadata upload failed");
+      }
+
+      const { metadataUrl } = await metadataRes.json();
+      console.log("✅ Metadata uploaded to IPFS:", metadataUrl);
+
+      /* ---------------------- STEP 3: Mint NFT via UMI ---------------------- */
+      setProgress(55);
+      setProgressText("Minting NFT on Solana...");
+
+      const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
+        .use(walletAdapterIdentity(wallet))
+        .use(mplTokenMetadata());
+
+      const mint = generateSigner(umi);
+
+      let createNftTx = createNft(umi, {
+        mint,
+        name: metadata.name,
+        uri: metadataUrl,
+        sellerFeeBasisPoints: percentAmount(5.5),
+        isCollection: false,
+      })
+        .add(setComputeUnitLimit(umi, { units: 350_000 }))
+        .add(setComputeUnitPrice(umi, { microLamports: 50_000 }));
+
+      await createNftTx.sendAndConfirm(umi, { confirm: { commitment: "confirmed" } });
+      const mintAddress = mint.publicKey.toString();
+      console.log("✅ NFT Minted:", mintAddress);
+      toast.success("NFT Minted!", { description: mintAddress });
+
+      /* ---------------------- STEP 4: Register song on-chain ---------------------- */
+      setProgress(75);
+      setProgressText("Registering song on-chain...");
+
+      const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
+      // Create the Anchor Program (provider-based). The IDL should contain the program id.
+      const program = new anchor.Program(idl as anchor.Idl, provider as any);
+
+      const [songPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("song"), new PublicKey(mintAddress).toBuffer()],
+        program.programId
+      );
+
+      // Check if song is already registered by querying the account directly.
+      // Using `connection.getAccountInfo` avoids depending on Anchor's account parsers
+      // and reduces race conditions where fetchNullable may return null while the
+      // account is allocated but not parsable yet.
+      const existingAccount = await connection.getAccountInfo(songPda);
+      if (existingAccount) {
+        toast("Song already registered!", { description: "This mint is already linked on-chain." });
+        setProgress(100);
+        setProgressText("Already registered!");
+        setIsLoading(false);
+        return;
+      }
+      const streamLamports = new anchor.BN(streamPrice * LAMPORTS_PER_SOL);
+
+      // Build the initialize instruction
+      // @ts-ignore
+      const initializeIx = await program.methods
+        .initializeSong(curatorShare * 100)
+        .accounts({
+          payer: wallet.publicKey,
+          song: songPda,
+          mint: new PublicKey(mintAddress),
+          artist: wallet.publicKey,
+          curator: new PublicKey(curator),
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction();
+
+      // Submit the transaction with retries to handle transient "blockhash expired" issues
+      const maxAttempts = 3;
+      let txSig: string | null = null;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+
+          const tx = new anchor.web3.Transaction({
+            recentBlockhash: latestBlockhash.blockhash,
+            feePayer: wallet.publicKey!,
+          });
+
+          tx.add(
+            anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 350_000 }),
+            anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }),
+            initializeIx
+          );
+
+          // Ask the wallet to sign the transaction (fresh recentBlockhash each attempt)
+          const signedTx = await wallet.signTransaction!(tx);
+
+          txSig = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false });
+
+          // Confirm it (use the blockhash info we just fetched)
+          await connection.confirmTransaction(
+            {
+              signature: txSig,
+              blockhash: latestBlockhash.blockhash,
+              lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+            },
+            "confirmed"
+          );
+
+          console.log("✅ Song registered:", txSig);
+          toast.success("Song Registered!", { description: txSig });
+          break; // success
+        } catch (err: any) {
+          console.error(`initializeSong attempt ${attempt + 1} failed:`, err);
+
+          const msg = (err && err.toString && err.toString()) || '';
+
+          // If the error indicates allocation/already-processed, check on-chain
+          // for the PDA and treat it as success if present.
+          if (msg.includes('already in use') || msg.includes('account already initialized') || msg.includes('already exists') || msg.includes('already been processed') || msg.includes('already processed')) {
+            try {
+              const existsNow = await connection.getAccountInfo(songPda);
+              if (existsNow) {
+                txSig = txSig || 'already-registered';
+                console.log('Song already registered on-chain (detected after tx failure). Treating as success.');
+                break;
+              }
+            } catch (e) {
+              // ignore and continue to retry
+            }
+          }
+
+          // For blockhash/expired related errors, retry after a short delay
+          if (attempt < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+
+          // Give up and rethrow the error to be handled by outer catch
+          throw err;
+        }
+      }
+
+      /* ---------------------- STEP 5: Save to backend ---------------------- */
+      setProgress(95);
+      setProgressText("Saving song to database...");
+
+      await fetch(`${API_BASE_URL}/init-song`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mint: mintAddress,
+          artist: wallet.publicKey.toBase58(),
+          curator,
+          curatorShareBps: curatorShare * 100,
+          ipfsAudioCid: audioCid,
+          metadataUri: metadataUrl,
+          streamLamports: streamLamports.toNumber(),
+          txSig,
+        }),
+      });
+
+      setProgress(100);
+      setProgressText("🎉 Upload complete!");
+      toast.success("Song successfully uploaded!");
+    } catch (error: any) {
+      console.error("❌ Upload failed:", error);
+      if (error.logs) console.log("Logs:", error.logs);
+      toast.error("Upload Failed", { description: error.message });
+      setProgress(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
 
@@ -305,6 +331,19 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <Label htmlFor="curatorShare">Curator Share (%)</Label>
                   <Input id="curatorShare" type="number" min="0" max="100" value={curatorShare} onChange={(e) => setCuratorShare(Number(e.target.value))} required />
                 </div>
+
+                <div className="grid w-full items-center gap-1.5">
+                                <Label htmlFor="streamPrice">Stream Price (SOL)</Label>
+                                <Input
+                                    id="streamPrice"
+                                    type="number"
+                                    step="0.0001"
+                                    min="0"
+                                    value={streamPrice}
+                                    onChange={(e) => setStreamPrice(Number(e.target.value))}
+                                    required
+                                />
+                            </div>
 
 
                 <div className="grid w-full items-center gap-1.5">

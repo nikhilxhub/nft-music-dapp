@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
-
+import { Readable } from 'stream'; 
 import cors from 'cors';
 import multer from 'multer';
 import mongoose from 'mongoose';
@@ -108,9 +108,22 @@ app.post('/upload', upload.single('file'), async (req: Request, res: Response) =
  */
 app.post('/init-song', async (req: Request, res: Response) => {
   try {
-    const { mint, artist, curator, curatorShareBps = 2000, ipfsAudioCid, metadataUri } = req.body;
+    // --- CHANGE #1: Destructure streamLamports from the request body ---
+    const { 
+      mint, 
+      artist, 
+      curator, 
+      curatorShareBps = 2000, 
+      ipfsAudioCid, 
+      metadataUri,
+      streamLamports // <-- ADD THIS
+    } = req.body;
+
     if (!mint || !artist || !curator) {
       return res.status(400).json({ error: 'mint/artist/curator required' });
+    }
+    if (streamLamports === undefined) { // Good practice to check for the price
+        return res.status(400).json({ error: 'streamLamports is required' });
     }
 
     const existing = await Song.findOne({ mint });
@@ -118,9 +131,15 @@ app.post('/init-song', async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'song already exists', song: existing });
     }
 
+    // --- CHANGE #2: Add streamLamports to the Song.create() call ---
     const song = await Song.create({
-      mint, artist, curator, curatorShareBps,
-      ipfsAudioCid, metadataUri,
+      mint, 
+      artist, 
+      curator, 
+      curatorShareBps,
+      ipfsAudioCid, 
+      metadataUri,
+      streamLamports, // <-- ADD THIS
     });
 
     return res.json({ success: true, song });
