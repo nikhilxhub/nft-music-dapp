@@ -27,7 +27,31 @@ export function SongCard({ song }: { song: Song }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  // useEffect(() => {
+  //   async function fetchMetadata() {
+  //     if (!song.metadataUri) {
+  //       setIsLoading(false);
+  //       setError(true);
+  //       return;
+  //     }
+  //     try {
+  //       const response = await fetch(song.metadataUri);
+  //       if (!response.ok) throw new Error("Failed to fetch metadata");
+  //       const data: NftMetadata = await response.json();
+  //       setMetadata(data);
+  //     } catch (err) {
+  //       console.error("Failed to fetch metadata for song:", song.mint, err);
+  //       setError(true);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }
+  //   fetchMetadata();
+  // }, [song.metadataUri, song.mint]);
+
+  // In app/MyComponents/SongCard.tsx
+
+useEffect(() => {
     async function fetchMetadata() {
       if (!song.metadataUri) {
         setIsLoading(false);
@@ -35,8 +59,18 @@ export function SongCard({ song }: { song: Song }) {
         return;
       }
       try {
-        const response = await fetch(song.metadataUri);
-        if (!response.ok) throw new Error("Failed to fetch metadata");
+        // Your backend API URL
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        
+        // CONSTRUCT THE PROXY URL
+        // We encode the metadataUri to ensure it's a valid URL parameter
+        const proxyUrl = `${API_BASE_URL}/metadata?url=${encodeURIComponent(song.metadataUri)}`;
+
+        // FETCH FROM YOUR BACKEND INSTEAD OF PINATA
+        const response = await fetch(proxyUrl);
+
+        if (!response.ok) throw new Error("Failed to fetch metadata via proxy");
+        
         const data: NftMetadata = await response.json();
         setMetadata(data);
       } catch (err) {
