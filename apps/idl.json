@@ -10,8 +10,11 @@
     {
       "name": "initialize_song",
       "docs": [
-        "Initialize a SongConfig PDA.",
-        "curator_share_bps: basis points (e.g., 2000 = 20.00%)"
+        "Initializes a SongConfig PDA with a fixed price per stream.",
+        "",
+        "Arguments:",
+        "* `curator_share_bps` - The curator's share in basis points (e.g., 2000 = 20.00%).",
+        "* `stream_lamports` - The fixed price in lamports for a single stream."
       ],
       "discriminator": [
         164,
@@ -68,14 +71,18 @@
         {
           "name": "curator_share_bps",
           "type": "u16"
+        },
+        {
+          "name": "stream_lamports",
+          "type": "u64"
         }
       ]
     },
     {
       "name": "log_stream",
       "docs": [
-        "Log a paid stream: transfers lamports from payer to artist/curator (split by curator_share_bps),",
-        "and increments stream_count."
+        "Logs a paid stream. The payment amount is determined by the `stream_lamports`",
+        "value stored in the SongConfig account, not by user input."
       ],
       "discriminator": [
         141,
@@ -128,12 +135,7 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -155,22 +157,25 @@
     {
       "code": 6000,
       "name": "InvalidArtist",
-      "msg": "Invalid artist account"
+      "msg": "The provided artist account does not match the one stored in the song config."
     },
     {
       "code": 6001,
       "name": "InvalidCurator",
-      "msg": "Invalid curator account"
+      "msg": "The provided curator account does not match the one stored in the song config."
     },
     {
       "code": 6002,
       "name": "MathOverflow",
-      "msg": "Math overflow"
+      "msg": "A calculation resulted in a math overflow."
     }
   ],
   "types": [
     {
       "name": "SongConfig",
+      "docs": [
+        "The on-chain account that stores all configuration for a song."
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -189,6 +194,10 @@
           {
             "name": "curator_share_bps",
             "type": "u16"
+          },
+          {
+            "name": "stream_lamports",
+            "type": "u64"
           },
           {
             "name": "stream_count",

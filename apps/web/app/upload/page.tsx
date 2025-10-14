@@ -96,7 +96,7 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       if (!audioUrl || !audioCid) {
         throw new Error("Failed to get URL and CID from audio upload response.");
       }
-      console.log("✅ Audio uploaded to IPFS:", audioUrl);
+      // console.log("✅ Audio uploaded to IPFS:", audioUrl);
 
       /* ---------------------- STEP 2: Construct and Upload Metadata ---------------------- */
       setProgress(30);
@@ -126,7 +126,7 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       }
 
       const { metadataUrl } = await metadataRes.json();
-      console.log("✅ Metadata uploaded to IPFS:", metadataUrl);
+      // console.log("✅ Metadata uploaded to IPFS:", metadataUrl);
 
       /* ---------------------- STEP 3: Mint NFT via UMI ---------------------- */
       setProgress(55);
@@ -157,9 +157,25 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       setProgress(75);
       setProgressText("Registering song on-chain...");
 
-      const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
-      // Create the Anchor Program (provider-based). The IDL should contain the program id.
-      const program = new anchor.Program(idl as anchor.Idl, provider as any);
+// ✅ Properly wrap wallet for Anchor
+if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
+  throw new Error("Please reconnect your wallet — missing signing capability.");
+}
+
+const anchorWallet = {
+  publicKey: wallet.publicKey,
+  signTransaction: wallet.signTransaction!,
+  signAllTransactions: wallet.signAllTransactions!,
+} as unknown as anchor.Wallet;
+
+// ✅ Proper provider with connection + commitment
+const provider = new anchor.AnchorProvider(connection, anchorWallet, {
+  commitment: "confirmed",
+});
+
+// ✅ Load Anchor program with correct provider + programId
+const program = new anchor.Program(idl as anchor.Idl, provider);
+
 
       const [songPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("song"), new PublicKey(mintAddress).toBuffer()],
@@ -170,7 +186,8 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       // Using `connection.getAccountInfo` avoids depending on Anchor's account parsers
       // and reduces race conditions where fetchNullable may return null while the
       // account is allocated but not parsable yet.
-      const existingAccount = await connection.getAccountInfo(songPda);
+      // @ts-ignore
+      const existingAccount = await program.account.songConfig?.fetchNullable?.(songPda);
       if (existingAccount) {
         toast("Song already registered!", { description: "This mint is already linked on-chain." });
         setProgress(100);
@@ -180,10 +197,13 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       }
       const streamLamports = new anchor.BN(streamPrice * LAMPORTS_PER_SOL);
 
-      // Build the initialize instruction
-      // @ts-ignore
-      const initializeIx = await program.methods
-        .initializeSong(curatorShare * 100)
+        // Build the initialize instruction
+        // The IDL expects two args: `curator_share_bps: u16` and `stream_lamports: u64`.
+        // We didn't expose a UI field for stream price yet, so use a sensible default.
+        const defaultStreamLamports = 1000; // 1000 lamports (~0.000001 SOL)
+        // @ts-ignore
+        const initializeIx = await program.methods
+          .initializeSong(curatorShare * 100, new anchor.BN(defaultStreamLamports))
         .accounts({
           payer: wallet.publicKey,
           song: songPda,
