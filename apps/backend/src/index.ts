@@ -12,6 +12,7 @@ import StreamLog from './models/StreamLog';
 import axios from 'axios';
 
 import pinataSDK from '@pinata/sdk'; 
+import Purchase from './models/Purchase';
 
 
 dotenv.config();
@@ -252,43 +253,55 @@ app.get('/user-assets', async (req: Request, res: Response) => {
 // ... after your other app.use() lines
 const pinata = new pinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_KEY);
 
+app.get('/song/:mint', async (req: Request, res: Response) => {
+  try {
+    const { mint } = req.params;
+    const song = await Song.findOne({ mint });
 
-// app.post('/upload-metadata', async (req: Request, res: Response) => {
-//   try {
-//     const metadata = req.body; // The JSON from your frontend
+    if (!song) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
 
-//     if (!metadata) {
-//       return res.status(400).json({ error: 'Missing metadata JSON body' });
-//     }
-
-//     const options = {
-//       pinataMetadata: {
-//         name: metadata.name || 'Song Metadata', // Give it a name for your Pinata account
-//       },
-//     };
-
-//     // Use the SDK to "pin" the JSON to IPFS
-//     const result = await pinata.pinJSONToIPFS(metadata, options);
+    // We also need to fetch the metadata here
+    const { data: metadata } = await axios.get(song.metadataUri!);
     
-//     // The result contains the IpfsHash (this is the CID or "tracking number")
-//     const { IpfsHash } = result;
+    res.json({ song, metadata });
 
-//     // Construct the full URL that the NFT needs
-//     const metadataUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
-
-//     return res.json({ success: true, metadataUrl: metadataUrl });
-
-//   } catch (err: any) {
-//     console.error('Metadata upload error:', err);
-//     return res.status(500).json({ error: err.message });
-//   }
-// });
+  } catch (err: any) {
+    console.error('Error fetching song details:', err);
+    res.status(500).json({ error: 'Failed to fetch song details' });
+  }
+});
 
 
-// Add this route in your backend's index.ts, before the app.listen() call
 
 
-// in your index.ts backend file
+
+
+/**
+ * Check if a user has access to a specific song
+ */
+app.get('/check-ownership', async (req: Request, res: Response) => {
+  try {
+    const { mint, userAddress } = req.query;
+
+    if (!mint || !userAddress) {
+      return res.status(400).json({ error: 'mint and userAddress are required' });
+    }
+
+    const purchaseRecord = await Purchase.findOne({
+      songMint: mint as string,
+      userAddress: userAddress as string,
+    });
+
+    // If a record exists, they have access
+    res.json({ hasAccess: !!purchaseRecord });
+
+  } catch (err: any) {
+    console.error('Error checking ownership:', err);
+    res.status(500).json({ error: 'Failed to check ownership' });
+  }
+});
 
 app.post('/upload-metadata', async (req: Request, res: Response) => {
   try {
