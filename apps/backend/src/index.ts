@@ -6,7 +6,7 @@ import multer from 'multer';
 import mongoose from 'mongoose';
 
 import { uploadFileToIpfs } from './services/ipfs';
-import { processWebhook } from './services/helius';
+import { processWebhook, processWebhookForSinglePayment } from './services/helius';
 import Song from './models/Song';
 import StreamLog from './models/StreamLog';
 import axios from 'axios';
@@ -164,7 +164,7 @@ app.post('/webhook/helius', async (req: Request, res: Response) => {
     }
 
     const payload = req.body;
-    await processWebhook(payload);
+    await processWebhookForSinglePayment(payload);
     res.status(200).send('ok');
   } catch (err: any) {
     console.error('webhook error', err);

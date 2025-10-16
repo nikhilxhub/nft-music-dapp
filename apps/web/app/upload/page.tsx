@@ -132,7 +132,10 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       setProgress(55);
       setProgressText("Minting NFT on Solana...");
 
-      const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
+      // const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
+      //   .use(walletAdapterIdentity(wallet))
+      //   .use(mplTokenMetadata());
+      const umi = createUmi(connection.rpcEndpoint)
         .use(walletAdapterIdentity(wallet))
         .use(mplTokenMetadata());
 

@@ -1,3 +1,4 @@
+import Purchase from '../models/Purchase';
 import Song from '../models/Song';
 import StreamLog from '../models/StreamLog';
 
@@ -115,6 +116,48 @@ export async function processWebhook(payload: WebhookPayload): Promise<boolean> 
           $inc: { streamCount: 1 },
           $set: { lastStreamSlot: t.slot || song.lastStreamSlot }
         });
+      }
+    }
+  }
+
+  return true;
+}
+
+
+
+export async function processWebhookForSinglePayment(payload: WebhookPayload): Promise<boolean> {
+  const items = Array.isArray(payload) ? payload : [payload];
+
+  for (const item of items) {
+    const transfers = extractTransfers(item);
+
+    for (const t of transfers) {
+      // We need a destination and a payer (source) to attribute the purchase
+      if (!t.destination || !t.source) continue;
+
+      // Find if the destination wallet belongs to one of our artists
+      const song = await Song.findOne({ artist: t.destination });
+
+      // Check if a song was found and if the amount matches the purchase price
+      if (song && song.streamLamports && t.lamports === song.streamLamports) {
+        
+        console.log(`Purchase detected for song ${song.mint} from ${t.source}`);
+
+        // Create a record in our new Purchase collection
+        // Use upsert to prevent duplicates based on txHash
+        await Purchase.findOneAndUpdate(
+          { txHash: t.txHash },
+          {
+            songMint: song.mint,
+            userAddress: t.source, // The payer is the user who now owns it
+            txHash: t.txHash,
+            amountLamports: t.lamports,
+          },
+          { upsert: true, new: true }
+        );
+
+        // You can optionally still log it as a stream or just handle it as a purchase
+        // For clarity, we've separated the logic.
       }
     }
   }
