@@ -40,7 +40,8 @@ export default function UploadPage() {
   const [progressText, setProgressText] = useState('');
 
   const [imageUrl, setImageUrl] = useState('');
-  const [streamPrice, setStreamPrice] = useState(0.001); 
+  const [streamPrice, setStreamPrice] = useState(0.001);
+  const [buyPrice, setBuyPrice] = useState(0.1); // <-- 1. Add state for the new buy price
 
 
   // const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
@@ -87,12 +88,8 @@ export default function UploadPage() {
         throw new Error(err.error || "Audio upload failed");
       }
 
-      // ✅ --- THE FIX IS HERE ---
-      // Expect `url` and `cid` from the backend, but rename them to
-      // `audioUrl` and `audioCid` for the rest of the function to use.
-const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
+      const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
 
-      // This check will now pass successfully
       if (!audioUrl || !audioCid) {
         throw new Error("Failed to get URL and CID from audio upload response.");
       }
@@ -102,7 +99,6 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       setProgress(30);
       setProgressText("Uploading metadata to IPFS...");
 
-      // ✅ --- FIX #2: Create metadata AFTER you have the public audioUrl ---
       const metadata = {
         name: title,
         symbol: "MUSIC",
@@ -132,10 +128,10 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       setProgress(55);
       setProgressText("Minting NFT on Solana...");
 
-      // const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
+      // const umi = createUmi(connection.rpcEndpoint)
       //   .use(walletAdapterIdentity(wallet))
       //   .use(mplTokenMetadata());
-      const umi = createUmi(connection.rpcEndpoint)
+      const umi = createUmi("https://devnet.helius-rpc.com/?api-key=fa881eb0-631a-4cc1-a392-7a86e94bf23c")
         .use(walletAdapterIdentity(wallet))
         .use(mplTokenMetadata());
 
@@ -160,24 +156,24 @@ const { fileUrl: audioUrl, ipfsHash: audioCid } = await uploadRes.json();
       setProgress(75);
       setProgressText("Registering song on-chain...");
 
-// ✅ Properly wrap wallet for Anchor
-if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
-  throw new Error("Please reconnect your wallet — missing signing capability.");
-}
+      // ✅ Properly wrap wallet for Anchor
+      if (!wallet.publicKey || !wallet.signTransaction || !wallet.signAllTransactions) {
+        throw new Error("Please reconnect your wallet — missing signing capability.");
+      }
 
-const anchorWallet = {
-  publicKey: wallet.publicKey,
-  signTransaction: wallet.signTransaction!,
-  signAllTransactions: wallet.signAllTransactions!,
-} as unknown as anchor.Wallet;
+      const anchorWallet = {
+        publicKey: wallet.publicKey,
+        signTransaction: wallet.signTransaction!,
+        signAllTransactions: wallet.signAllTransactions!,
+      } as unknown as anchor.Wallet;
 
-// ✅ Proper provider with connection + commitment
-const provider = new anchor.AnchorProvider(connection, anchorWallet, {
-  commitment: "confirmed",
-});
+      // ✅ Proper provider with connection + commitment
+      const provider = new anchor.AnchorProvider(connection, anchorWallet, {
+        commitment: "confirmed",
+      });
 
-// ✅ Load Anchor program with correct provider + programId
-const program = new anchor.Program(idl as anchor.Idl, provider);
+      // ✅ Load Anchor program with correct provider + programId
+      const program = new anchor.Program(idl as anchor.Idl, provider);
 
 
       const [songPda] = PublicKey.findProgramAddressSync(
@@ -185,10 +181,7 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
         program.programId
       );
 
-      // Check if song is already registered by querying the account directly.
-      // Using `connection.getAccountInfo` avoids depending on Anchor's account parsers
-      // and reduces race conditions where fetchNullable may return null while the
-      // account is allocated but not parsable yet.
+      // Check if song is already registered
       // @ts-ignore
       const existingAccount = await program.account.songConfig?.fetchNullable?.(songPda);
       if (existingAccount) {
@@ -198,15 +191,20 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
         setIsLoading(false);
         return;
       }
+      
+      // <-- 3. Calculate BOTH prices from state -->
       const streamLamports = new anchor.BN(streamPrice * LAMPORTS_PER_SOL);
+      const buyLamports = new anchor.BN(buyPrice * LAMPORTS_PER_SOL);
 
-        // Build the initialize instruction
-        // The IDL expects two args: `curator_share_bps: u16` and `stream_lamports: u64`.
-        // We didn't expose a UI field for stream price yet, so use a sensible default.
-        const defaultStreamLamports = 1000; // 1000 lamports (~0.000001 SOL)
-        // @ts-ignore
-        const initializeIx = await program.methods
-          .initializeSong(curatorShare * 100, new anchor.BN(defaultStreamLamports))
+      // Build the initialize instruction
+      // The IDL expects three args: `curator_share_bps: u16`, `stream_lamports: u64`, `buy_lamports: u64`.
+      // @ts-ignore
+      const initializeIx = await program.methods
+        .initializeSong(
+            curatorShare * 100, // curator_share_bps
+            streamLamports,     // stream_lamports
+            buyLamports         // buy_lamports
+        )
         .accounts({
           payer: wallet.publicKey,
           song: songPda,
@@ -217,7 +215,7 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
         })
         .instruction();
 
-      // Submit the transaction with retries to handle transient "blockhash expired" issues
+      // Submit the transaction
       const maxAttempts = 3;
       let txSig: string | null = null;
 
@@ -236,12 +234,9 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
             initializeIx
           );
 
-          // Ask the wallet to sign the transaction (fresh recentBlockhash each attempt)
           const signedTx = await wallet.signTransaction!(tx);
-
           txSig = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false });
 
-          // Confirm it (use the blockhash info we just fetched)
           await connection.confirmTransaction(
             {
               signature: txSig,
@@ -258,9 +253,7 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
           console.error(`initializeSong attempt ${attempt + 1} failed:`, err);
 
           const msg = (err && err.toString && err.toString()) || '';
-
-          // If the error indicates allocation/already-processed, check on-chain
-          // for the PDA and treat it as success if present.
+          
           if (msg.includes('already in use') || msg.includes('account already initialized') || msg.includes('already exists') || msg.includes('already been processed') || msg.includes('already processed')) {
             try {
               const existsNow = await connection.getAccountInfo(songPda);
@@ -274,13 +267,11 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
             }
           }
 
-          // For blockhash/expired related errors, retry after a short delay
           if (attempt < maxAttempts - 1) {
             await new Promise((r) => setTimeout(r, 500));
             continue;
           }
 
-          // Give up and rethrow the error to be handled by outer catch
           throw err;
         }
       }
@@ -300,6 +291,7 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
           ipfsAudioCid: audioCid,
           metadataUri: metadataUrl,
           streamLamports: streamLamports.toNumber(),
+          buyLamports: buyLamports.toNumber(), // <-- 4. Send new buy price to your backend
           txSig,
         }),
       });
@@ -316,11 +308,6 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
       setIsLoading(false);
     }
   };
-
-
-
-
-
 
   return (
     <>
@@ -348,7 +335,15 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
                 </div>
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="curator">Curator Wallet Address</Label>
-                  <Input id="curator" type="text" placeholder="Wallet address of the person who will help promote" value={curator} onChange={(e) => setCurator(e.target.value)} required />
+
+                   <Input
+    id="curator"
+    type="text"
+    placeholder="Wallet address of the person who will help promote"
+    value={curator}
+    onChange={(e) => setCurator(e.target.value)}
+    required
+  />
                 </div>
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="curatorShare">Curator Share (%)</Label>
@@ -356,18 +351,31 @@ const program = new anchor.Program(idl as anchor.Idl, provider);
                 </div>
 
                 <div className="grid w-full items-center gap-1.5">
-                                <Label htmlFor="streamPrice">Stream Price (SOL)</Label>
-                                <Input
-                                    id="streamPrice"
-                                    type="number"
-                                    step="0.0001"
-                                    min="0"
-                                    value={streamPrice}
-                                    onChange={(e) => setStreamPrice(Number(e.target.value))}
-                                    required
-                                />
-                            </div>
+                  <Label htmlFor="streamPrice">Stream Price (SOL)</Label>
+                  <Input
+                    id="streamPrice"
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={streamPrice}
+                    onChange={(e) => setStreamPrice(Number(e.target.value))}
+                    required
+                  />
+                </div>
 
+                {/* <-- 2. Add the new Input field for Buy Price --> */}
+                <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="buyPrice">Buy Price (SOL)</Label>
+                  <Input
+                    id="buyPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={buyPrice}
+                    onChange={(e) => setBuyPrice(Number(e.target.value))}
+                    required
+                  />
+                </div>
 
                 <div className="grid w-full items-center gap-1.5">
                   <Label htmlFor="imageUrl">Image URL</Label>

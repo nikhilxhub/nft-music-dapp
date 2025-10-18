@@ -107,55 +107,105 @@ app.post('/upload', upload.single('file'), async (req: Request, res: Response) =
 /**
  * Create song record
  */
+// app.post('/init-song', async (req: Request, res: Response) => {
+//   try {
+//     // --- CHANGE #1: Destructure streamLamports from the request body ---
+//     const { 
+//       mint, 
+//       artist, 
+//       curator, 
+//       curatorShareBps = 2000, 
+//       ipfsAudioCid, 
+//       metadataUri,
+//       streamLamports // <-- ADD THIS
+//     } = req.body;
+
+//     if (!mint || !artist || !curator) {
+//       return res.status(400).json({ error: 'mint/artist/curator required' });
+//     }
+//     if (streamLamports === undefined) { // Good practice to check for the price
+//         return res.status(400).json({ error: 'streamLamports is required' });
+//     }
+
+//     const existing = await Song.findOne({ mint });
+//     if (existing) {
+//       return res.status(409).json({ error: 'song already exists', song: existing });
+//     }
+
+//     // --- CHANGE #2: Add streamLamports to the Song.create() call ---
+//     const song = await Song.create({
+//       mint, 
+//       artist, 
+//       curator, 
+//       curatorShareBps,
+//       ipfsAudioCid, 
+//       metadataUri,
+//       streamLamports, // <-- ADD THIS
+//     });
+
+//     return res.json({ success: true, song });
+//   } catch (err: any) {
+//     console.error('init-song error', err);
+//     return res.status(500).json({ error: err.message });
+//   }
+// });
+
+
 app.post('/init-song', async (req: Request, res: Response) => {
-  try {
-    // --- CHANGE #1: Destructure streamLamports from the request body ---
-    const { 
-      mint, 
-      artist, 
-      curator, 
-      curatorShareBps = 2000, 
-      ipfsAudioCid, 
-      metadataUri,
-      streamLamports // <-- ADD THIS
-    } = req.body;
+ try {
+ // --- CHANGE #1: Destructure streamLamports AND buyLamports ---
+ const { 
+  mint, 
+  artist, 
+  curator, 
+  curatorShareBps = 2000, 
+  ipfsAudioCid, 
+  metadataUri,
+  streamLamports, // <-- Already here
+  buyLamports     // <-- ADD THIS
+ } = req.body;
 
-    if (!mint || !artist || !curator) {
-      return res.status(400).json({ error: 'mint/artist/curator required' });
-    }
-    if (streamLamports === undefined) { // Good practice to check for the price
-        return res.status(400).json({ error: 'streamLamports is required' });
-    }
+ if (!mint || !artist || !curator) {
+  return res.status(400).json({ error: 'mint/artist/curator required' });
+ }
 
-    const existing = await Song.findOne({ mint });
-    if (existing) {
-      return res.status(409).json({ error: 'song already exists', song: existing });
-    }
+    // --- CHANGE #2: Validate both prices ---
+ if (streamLamports === undefined || buyLamports === undefined) { 
+  return res.status(400).json({ error: 'streamLamports and buyLamports are required' });
+ }
 
-    // --- CHANGE #2: Add streamLamports to the Song.create() call ---
-    const song = await Song.create({
-      mint, 
-      artist, 
-      curator, 
-      curatorShareBps,
-      ipfsAudioCid, 
-      metadataUri,
-      streamLamports, // <-- ADD THIS
-    });
+ const existing = await Song.findOne({ mint });
+ if (existing) {
+  return res.status(409).json({ error: 'song already exists', song: existing });
+ }
 
-    return res.json({ success: true, song });
-  } catch (err: any) {
-    console.error('init-song error', err);
-    return res.status(500).json({ error: err.message });
-  }
+ // --- CHANGE #3: Add buyLamports to the Song.create() call ---
+ const song = await Song.create({
+  mint, 
+  artist, 
+  curator, 
+  curatorShareBps,
+  ipfsAudioCid, 
+  metadataUri,
+  streamLamports, // <-- Already here
+  buyLamports,    // <-- ADD THIS
+ });
+
+ return res.json({ success: true, song });
+ } catch (err: any) {
+ console.error('init-song error', err);
+ return res.status(500).json({ error: err.message });
+ }
 });
-
 /**
  * Helius webhook
  */
 app.post('/webhook/helius', async (req: Request, res: Response) => {
   try {
     const incomingAuth = req.get('authorization') || req.get('Authorization') || '';
+
+    console.log('Incoming Authorization:', incomingAuth);
+  console.log('Expected:', process.env.HELIUS_WEBHOOK_SECRET);
     if (!process.env.HELIUS_WEBHOOK_SECRET) {
       console.warn('HELIUS_WEBHOOK_SECRET not set; accepting all webhooks (dev only)');
     } else if (incomingAuth !== process.env.HELIUS_WEBHOOK_SECRET) {
@@ -164,6 +214,7 @@ app.post('/webhook/helius', async (req: Request, res: Response) => {
     }
 
     const payload = req.body;
+    console.log(payload);
     await processWebhookForSinglePayment(payload);
     res.status(200).send('ok');
   } catch (err: any) {

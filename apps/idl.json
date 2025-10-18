@@ -8,13 +8,103 @@
   },
   "instructions": [
     {
+      "name": "buy_song",
+      "docs": [
+        "Buy the song permanently at `song.buy_lamports`.",
+        "Transfers funds (artist/curator split) and creates an ownership PDA."
+      ],
+      "discriminator": [
+        68,
+        209,
+        165,
+        7,
+        167,
+        158,
+        160,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "song",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "song.mint",
+                "account": "SongConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "song"
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "artist",
+          "writable": true
+        },
+        {
+          "name": "curator",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize_song",
       "docs": [
-        "Initializes a SongConfig PDA with a fixed price per stream.",
+        "Initializes a SongConfig PDA with both per-stream and one-time purchase prices.",
         "",
         "Arguments:",
         "* `curator_share_bps` - The curator's share in basis points (e.g., 2000 = 20.00%).",
-        "* `stream_lamports` - The fixed price in lamports for a single stream."
+        "* `stream_lamports` - Fixed price in lamports for a single stream.",
+        "* `buy_lamports` - One-time price in lamports to permanently own the song."
       ],
       "discriminator": [
         164,
@@ -75,14 +165,18 @@
         {
           "name": "stream_lamports",
           "type": "u64"
+        },
+        {
+          "name": "buy_lamports",
+          "type": "u64"
         }
       ]
     },
     {
       "name": "log_stream",
       "docs": [
-        "Logs a paid stream. The payment amount is determined by the `stream_lamports`",
-        "value stored in the SongConfig account, not by user input."
+        "Logs a paid stream. The payment amount is determined by `song.stream_lamports`.",
+        "Splits payment between artist and curator, updates counters."
       ],
       "discriminator": [
         141,
@@ -151,6 +245,19 @@
         14,
         177
       ]
+    },
+    {
+      "name": "SongOwnership",
+      "discriminator": [
+        72,
+        237,
+        251,
+        141,
+        19,
+        43,
+        251,
+        230
+      ]
     }
   ],
   "errors": [
@@ -200,12 +307,35 @@
             "type": "u64"
           },
           {
+            "name": "buy_lamports",
+            "type": "u64"
+          },
+          {
             "name": "stream_count",
             "type": "u64"
           },
           {
             "name": "last_stream_slot",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SongOwnership",
+      "docs": [
+        "Ownership record: marks a buyer as permanent owner of a song."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "song",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
           }
         ]
       }
