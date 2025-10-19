@@ -80,7 +80,7 @@ const fetchProfileData = async () => {
     ]);
 
     console.log("nfts daata:::", nftsData);
-    console.log("nfts daata:::", nftsRes.jso);
+    console.log("nfts daata:::", nftsRes.json);
 
     // ✅ 1. Set stream history (as listener)
     setStreamHistory(
