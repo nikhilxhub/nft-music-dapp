@@ -354,6 +354,59 @@ app.get('/check-ownership', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/record-purchase', async (req: Request, res: Response) => {
+  try {
+    const { songMint, userAddress, txHash, amountLamports } = req.body;
+
+    if (!songMint || !userAddress || !txHash || !amountLamports) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Prevent duplicate transaction logs
+    const existing = await Purchase.findOne({ txHash });
+    if (existing) return res.status(409).json({ error: 'Purchase already recorded' });
+
+    const purchase = await Purchase.create({
+      songMint,
+      userAddress,
+      txHash,
+      amountLamports,
+    });
+
+    res.json({ success: true, purchase });
+  } catch (err: any) {
+    console.error('record-purchase error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/record-stream', async (req: Request, res: Response) => {
+  try {
+    const { songMint, txHash, payer, destination, amountLamports } = req.body;
+
+    if (!songMint || !txHash || !payer) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const existing = await StreamLog.findOne({ txHash });
+    if (existing) return res.status(409).json({ error: 'Stream already recorded' });
+
+    const stream = await StreamLog.create({
+      songMint,
+      txHash,
+      payer,
+      destination,
+      amountLamports,
+    });
+
+    res.json({ success: true, stream });
+  } catch (err: any) {
+    console.error('record-stream error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.post('/upload-metadata', async (req: Request, res: Response) => {
   try {
     const metadata = req.body; 

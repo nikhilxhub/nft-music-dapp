@@ -51,38 +51,63 @@ export default function ProfilePage() {
       return;
     }
 
-    const fetchProfileData = async () => {
-      setLoading(true);
-      const userAddress = publicKey.toBase58();
-      // Replace with your actual backend URL
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const fetchProfileData = async () => {
+  setLoading(true);
 
-      try {
-        const [streamsRes, earningsRes, nftsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/streams?payer=${userAddress}`),
-          fetch(`${API_BASE_URL}/streams?destination=${userAddress}`),
-          fetch(`${API_BASE_URL}/user-assets?owner=${userAddress}`),
-        ]);
+  const userAddress = publicKey.toBase58();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-        if (!streamsRes.ok || !earningsRes.ok || !nftsRes.ok) {
-          console.warn("One or more profile fetches failed");
+  try {
+    // parallel fetching of user’s streams (as listener), streams received (as artist), and NFTs
+    const [streamsRes, earningsRes, nftsRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/streams?payer=${userAddress}`),
+      fetch(`${API_BASE_URL}/streams?destination=${userAddress}`),
+      fetch(`${API_BASE_URL}/user-assets?owner=${userAddress}`),
+    ]);
 
-          return;
-        }
+    // If any fetch failed, throw error
+    if (!streamsRes.ok || !earningsRes.ok || !nftsRes.ok) {
+      console.warn("One or more profile fetches failed");
+      toast.error("Some profile data failed to load");
+      return;
+    }
 
-        setStreamHistory(await streamsRes.json());
-        setEarnings(await earningsRes.json());
-        const nftsData = await nftsRes.json();
-        setMyNfts(nftsData.items || []);
-      } catch (error) {
-        console.error("Failed to fetch profile data:", error);
-        // You can add a toast notification here for the user
+    // Parse all JSON results
+    const [streamsData, earningsData, nftsData] = await Promise.all([
+      streamsRes.json(),
+      earningsRes.json(),
+      nftsRes.json(),
+    ]);
 
-        toast.error("Failed Fetching Data")
-      } finally {
-        setLoading(false);
-      }
-    };
+    console.log("nfts daata:::", nftsData);
+    console.log("nfts daata:::", nftsRes.jso);
+
+    // ✅ 1. Set stream history (as listener)
+    setStreamHistory(
+      Array.isArray(streamsData)
+        ? streamsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        : []
+    );
+
+    // ✅ 2. Set earnings (as artist)
+    setEarnings(
+      Array.isArray(earningsData)
+        ? earningsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        : []
+    );
+
+    // ✅ 3. Set owned NFTs (from /user-assets)
+    // /user-assets returns array of songs stored in your platform DB
+    setMyNfts(Array.isArray(nftsData) ? nftsData : []);
+
+  } catch (error) {
+    console.error("Failed to fetch profile data:", error);
+    toast.error("Failed to fetch profile data");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     fetchProfileData();
   }, [publicKey, connected]);
@@ -151,21 +176,27 @@ export default function ProfilePage() {
 
               <TabsContent value="nfts">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {myNfts.length > 0 ? (
-                    myNfts.map((nft) => (
-                      <Card key={nft.id}>
-                        <CardHeader>
-                          <img src={nft.content.links.image} alt={nft.content.metadata.name} className="aspect-square w-full rounded-md object-cover" />
-                        </CardHeader>
-                        <CardContent>
-                          <p className="font-semibold">{nft.content.metadata.name}</p>
-                          <p className="text-sm text-muted-foreground">{nft.content.metadata.symbol}</p>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground col-span-full">You don't own any song NFTs from this platform.</p>
-                  )}
+                  {myNfts.map((nft) => {
+  const imageUrl = nft.content?.links?.image ?? "/placeholder.png";
+  const name = nft.content?.metadata?.name ?? "Unknown";
+  const symbol = nft.content?.metadata?.symbol ?? "";
+
+  return (
+    <Card key={nft.id}>
+      <CardHeader>
+        <img
+          src={imageUrl}
+          alt={name}
+          className="aspect-square w-full rounded-md object-cover"
+        />
+      </CardHeader>
+      <CardContent>
+        <p className="font-semibold">{name}</p>
+        <p className="text-sm text-muted-foreground">{symbol}</p>
+      </CardContent>
+    </Card>
+  );
+})}
                 </div>
               </TabsContent>
 
