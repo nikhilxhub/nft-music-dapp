@@ -19,7 +19,7 @@ import idl from "@/../idl.json"; // Make sure your IDL is accessible
 import { NavBar } from "../MyComponents/NavBar";
 import { toast } from "sonner";
 import { setComputeUnitLimit, setComputeUnitPrice } from "@metaplex-foundation/mpl-toolbox";
-
+import { useRouter } from 'next/navigation';
 // Your Anchor Program ID
 const programId = new PublicKey(idl.address);
 
@@ -43,7 +43,7 @@ export default function UploadPage() {
   const [streamPrice, setStreamPrice] = useState(0.001);
   const [buyPrice, setBuyPrice] = useState(0.1); // <-- 1. Add state for the new buy price
 
-
+  const router = useRouter();
   // const provider = new anchor.AnchorProvider(connection, wallet as any, { commitment: "confirmed" });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,6 +299,8 @@ export default function UploadPage() {
       setProgress(100);
       setProgressText("🎉 Upload complete!");
       toast.success("Song successfully uploaded!");
+
+      router.push("/homepage")
     } catch (error: any) {
       console.error("❌ Upload failed:", error);
       if (error.logs) console.log("Logs:", error.logs);

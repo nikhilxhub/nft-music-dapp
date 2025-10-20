@@ -253,6 +253,52 @@ app.get('/streams', async (req: Request, res: Response) => {
 
 
 
+// app.get('/user-assets', async (req: Request, res: Response) => {
+//   try {
+//     const { owner } = req.query;
+//     if (!owner) {
+//       return res.status(400).json({ error: 'Owner address is required' });
+//     }
+
+//     const heliusRpcUrl = `https://devnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`;
+
+//     // STEP 1: Fetch ALL asset data from Helius
+//     const { data } = await axios.post(heliusRpcUrl, {
+//       jsonrpc: '2.0',
+//       id: 'my-id',
+//       method: 'getAssetsByOwner',
+//       params: {
+//         ownerAddress: owner as string,
+//         page: 1,
+//         limit: 1000, // Fetch a larger list to check against
+//       },
+//     });
+
+//     if (!data.result || !data.result.items) {
+//       return res.json([]); // Return empty array if user has no assets
+//     }
+
+//     // Extract just the mint addresses from the Helius response
+//     const userNftMints = data.result.items.map((asset: any) => asset.id);
+
+//     // STEP 2: Filter these mints against YOUR database
+//     // Use the `$in` operator to find all songs that match any of the mints in the user's wallet.
+//     // This is much more efficient than looping and querying one by one.
+//     const platformSongsOwnedByUser = await Song.find({
+//       mint: { $in: userNftMints },
+//     });
+
+//     // STEP 3: Return only the songs that are part of your platform
+//     res.json(platformSongsOwnedByUser);
+
+//   } catch (err: any) {
+//     console.error('Error fetching user assets:', err);
+//     res.status(500).json({ error: 'Failed to fetch assets' });
+//   }
+// });
+
+// Your backend /user-assets endpoint
+
 app.get('/user-assets', async (req: Request, res: Response) => {
   try {
     const { owner } = req.query;
@@ -270,34 +316,44 @@ app.get('/user-assets', async (req: Request, res: Response) => {
       params: {
         ownerAddress: owner as string,
         page: 1,
-        limit: 1000, // Fetch a larger list to check against
+        limit: 1000,
       },
     });
 
-    if (!data.result || !data.result.items) {
+    if (!data.result || !data.result.items || data.result.items.length === 0) {
       return res.json([]); // Return empty array if user has no assets
     }
 
+    // This is the full list of assets from Helius (with image, name, etc.)
+    const allUserAssetsFromHelius = data.result.items;
+
     // Extract just the mint addresses from the Helius response
-    const userNftMints = data.result.items.map((asset: any) => asset.id);
+    const userNftMints = allUserAssetsFromHelius.map((asset: any) => asset.id);
 
-    // STEP 2: Filter these mints against YOUR database
-    // Use the `$in` operator to find all songs that match any of the mints in the user's wallet.
-    // This is much more efficient than looping and querying one by one.
-    const platformSongsOwnedByUser = await Song.find({
+    // STEP 2: Find which of these mints are registered in YOUR database
+    // We only need the 'mint' field for comparison
+    const platformSongs = await Song.find({
       mint: { $in: userNftMints },
-    });
+    }).select('mint'); // <-- Efficiently select only the 'mint' field
 
-    // STEP 3: Return only the songs that are part of your platform
-    res.json(platformSongsOwnedByUser);
+    // Create a Set of your platform's song mints for fast lookup
+    const platformSongMintSet = new Set(platformSongs.map(song => song.mint));
+
+    // STEP 3: Filter the Helius list
+    // Return only the assets from Helius that are ALSO in your platform's database
+    const platformAssetsOwnedByUser = allUserAssetsFromHelius.filter(
+      (asset: any) => platformSongMintSet.has(asset.id)
+    );
+
+    // STEP 4: Return the filtered Helius-structured data
+    // This data matches what your frontend expects!
+    res.json(platformAssetsOwnedByUser);
 
   } catch (err: any) {
     console.error('Error fetching user assets:', err);
     res.status(500).json({ error: 'Failed to fetch assets' });
   }
 });
-
-
 
 
 

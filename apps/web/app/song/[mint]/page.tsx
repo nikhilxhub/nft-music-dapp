@@ -117,6 +117,7 @@ const SongPage = () => {
       );
 
       // Build the instruction
+      // @ts-ignore
       const buyIx = await program!.methods!
         .buySong()
         .accounts({
@@ -179,6 +180,7 @@ const SongPage = () => {
       );
 
       // Build the instruction
+      // @ts-ignore
       const streamIx = await program!.methods!
         .logStream()
         .accounts({

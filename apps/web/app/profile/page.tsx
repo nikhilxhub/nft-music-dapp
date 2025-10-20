@@ -4,18 +4,19 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState } from "react";
 // import { SiteHeader } from "@/components/SiteHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink } from "lucide-react";
 import { NavBar } from "../MyComponents/NavBar";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { blink } from "../utils/blinks";
 
 // --- Data Types ---
 // Matches your StreamLog Mongoose schema
 interface StreamLog {
-  _id: string;
+  _id: string; // Used for keys
   songMint: string;
   txHash: string;
   amountLamports: number;
@@ -23,8 +24,9 @@ interface StreamLog {
 }
 
 // Simplified type for Helius getAssetsByOwner response
+// Your component EXPECTS this, but your API is NOT sending it.
 interface NftAsset {
-  id: string;
+  id: string; // This is the mint address
   content: {
     metadata: {
       name: string;
@@ -34,6 +36,11 @@ interface NftAsset {
       image: string;
     };
   };
+  // This is what your API is *actually* sending
+  // This is just for explanation, don't mix types like this.
+  // mint: string;
+  // artist: string;
+  // metadataUri: string;
 }
 
 // --- Main Component ---
@@ -41,7 +48,10 @@ export default function ProfilePage() {
   const { publicKey, connected } = useWallet();
   const [streamHistory, setStreamHistory] = useState<StreamLog[]>([]);
   const [earnings, setEarnings] = useState<StreamLog[]>([]);
-  const [myNfts, setMyNfts] = useState<NftAsset[]>([]);
+
+  // Your state is typed as NftAsset[], but your API sends database objects.
+  // This is the source of the problem. We'll use `any[]` for now.
+  const [myNfts, setMyNfts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,62 +61,60 @@ export default function ProfilePage() {
       return;
     }
 
-const fetchProfileData = async () => {
-  setLoading(true);
+    const fetchProfileData = async () => {
+      setLoading(true);
 
-  const userAddress = publicKey.toBase58();
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const userAddress = publicKey.toBase58();
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-  try {
-    // parallel fetching of user’s streams (as listener), streams received (as artist), and NFTs
-    const [streamsRes, earningsRes, nftsRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/streams?payer=${userAddress}`),
-      fetch(`${API_BASE_URL}/streams?destination=${userAddress}`),
-      fetch(`${API_BASE_URL}/user-assets?owner=${userAddress}`),
-    ]);
+      try {
+        // parallel fetching
+        const [streamsRes, earningsRes, nftsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/streams?payer=${userAddress}`),
+          fetch(`${API_BASE_URL}/streams?destination=${userAddress}`),
+          fetch(`${API_BASE_URL}/user-assets?owner=${userAddress}`),
+        ]);
 
-    // If any fetch failed, throw error
-    if (!streamsRes.ok || !earningsRes.ok || !nftsRes.ok) {
-      console.warn("One or more profile fetches failed");
-      toast.error("Some profile data failed to load");
-      return;
-    }
+        // If any fetch failed, throw error
+        if (!streamsRes.ok || !earningsRes.ok || !nftsRes.ok) {
+          console.warn("One or more profile fetches failed");
+          toast.error("Some profile data failed to load");
+          return;
+        }
 
-    // Parse all JSON results
-    const [streamsData, earningsData, nftsData] = await Promise.all([
-      streamsRes.json(),
-      earningsRes.json(),
-      nftsRes.json(),
-    ]);
+        // Parse all JSON results
+        const [streamsData, earningsData, nftsData] = await Promise.all([
+          streamsRes.json(),
+          earningsRes.json(),
+          nftsRes.json(),
+        ]);
 
-    console.log("nfts daata:::", nftsData);
-    console.log("nfts daata:::", nftsRes.json);
+        console.log("nfts daata:::", nftsData); // <-- CHECK THIS LOG in your browser
 
-    // ✅ 1. Set stream history (as listener)
-    setStreamHistory(
-      Array.isArray(streamsData)
-        ? streamsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        : []
-    );
+        // ✅ 1. Set stream history (as listener)
+        setStreamHistory(
+          Array.isArray(streamsData)
+            ? streamsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            : []
+        );
 
-    // ✅ 2. Set earnings (as artist)
-    setEarnings(
-      Array.isArray(earningsData)
-        ? earningsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        : []
-    );
+        // ✅ 2. Set earnings (as artist)
+        setEarnings(
+          Array.isArray(earningsData)
+            ? earningsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            : []
+        );
 
-    // ✅ 3. Set owned NFTs (from /user-assets)
-    // /user-assets returns array of songs stored in your platform DB
-    setMyNfts(Array.isArray(nftsData) ? nftsData : []);
+        // ✅ 3. Set owned NFTs
+        setMyNfts(Array.isArray(nftsData) ? nftsData : []);
 
-  } catch (error) {
-    console.error("Failed to fetch profile data:", error);
-    toast.error("Failed to fetch profile data");
-  } finally {
-    setLoading(false);
-  }
-};
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error);
+        toast.error("Failed to fetch profile data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
 
     fetchProfileData();
@@ -130,9 +138,9 @@ const fetchProfileData = async () => {
 
 
         <h1 className="text-3xl font-bold mb-6">My Profile</h1>
-        <Link href= "/upload">
-        
-        <Button>Upload song</Button>
+        <Link href="/upload">
+
+          <Button>Upload song</Button>
         </Link>
         <Tabs defaultValue="streams" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -177,26 +185,33 @@ const fetchProfileData = async () => {
               <TabsContent value="nfts">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {myNfts.map((nft) => {
-  const imageUrl = nft.content?.links?.image ?? "/placeholder.png";
-  const name = nft.content?.metadata?.name ?? "Unknown";
-  const symbol = nft.content?.metadata?.symbol ?? "";
+                    // This code is TRYING to read a Helius object
+                    const imageUrl = nft.content?.links?.image ?? "/placeholder.png";
+                    const name = nft.content?.metadata?.name ?? "Unknown";
+                    const symbol = nft.content?.metadata?.symbol ?? "";
 
-  return (
-    <Card key={nft.id}>
-      <CardHeader>
-        <img
-          src={imageUrl}
-          alt={name}
-          className="aspect-square w-full rounded-md object-cover"
-        />
-      </CardHeader>
-      <CardContent>
-        <p className="font-semibold">{name}</p>
-        <p className="text-sm text-muted-foreground">{symbol}</p>
-      </CardContent>
-    </Card>
-  );
-})}
+
+                    return (
+                      // FIX 1 (BAND-AID): Use `nft.mint` or `nft._id` for the key.
+                      // Your DB object has `mint`, not `id`. This fixes the crash.
+                      <Card key={nft.id}>
+                        <CardHeader>
+                          <img
+                            src={imageUrl} // Still broken (shows placeholder)
+                            alt={name}     // Still broken (shows "Unknown")
+                            className="aspect-square w-full rounded-md object-cover"
+                          />
+                        </CardHeader>
+                        <CardContent>
+                          <p className="font-semibold">{name}</p>
+                          <p className="text-sm text-muted-foreground">{symbol}</p>
+                        </CardContent>
+                        <CardFooter>
+                          <Button onClick={() => blink()}>Share via Blink</Button>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
               </TabsContent>
 

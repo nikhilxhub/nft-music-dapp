@@ -7,13 +7,13 @@ import LandingPage from "./MyComponents/LandingPage";
 
 export default function Home() {
   return (
-    <div className= "bg-red-100">
+    <div>
 
       hello
 
       <LandingPage />
 
-      <Button variant="ghost">heelo</Button>
+      {/* <Button variant="ghost">heelo</Button> */}
     </div>
   );
 }
