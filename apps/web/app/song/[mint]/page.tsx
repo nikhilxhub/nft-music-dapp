@@ -7,6 +7,9 @@ import { SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL, Connection } f
 import * as anchor from "@coral-xyz/anchor";
 import { toast } from "sonner";
 import idl from "@/../idl.json"; // Make sure your IDL is accessible
+import { createBuySongInstruction } from "@/app/lib/solanaTransaction";
+import { Button } from "@/components/ui/button";
+import { blink } from "@/app/utils/blinks";
 
 // Your Anchor Program ID
 const programId = new PublicKey(idl.address);
@@ -102,33 +105,41 @@ const SongPage = () => {
     setIsProcessing(true);
     try {
       // Find the PDAs required by the 'buy_song' instruction
-      const [songPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("song"), new PublicKey(songDetails.mint).toBuffer()],
-        program.programId
-      );
+      // const [songPda] = PublicKey.findProgramAddressSync(
+      //   [Buffer.from("song"), new PublicKey(songDetails.mint).toBuffer()],
+      //   program.programId
+      // );
 
-      const [ownershipPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("ownership"),
-          songPda.toBuffer(),
-          publicKey.toBuffer(),
-        ],
-        program.programId
-      );
+      // const [ownershipPda] = PublicKey.findProgramAddressSync(
+      //   [
+      //     Buffer.from("ownership"),
+      //     songPda.toBuffer(),
+      //     publicKey.toBuffer(),
+      //   ],
+      //   program.programId
+      // );
 
-      // Build the instruction
-      // @ts-ignore
-      const buyIx = await program!.methods!
-        .buySong()
-        .accounts({
-          buyer: publicKey,
-          song: songPda,
-          ownership: ownershipPda,
-          artist: new PublicKey(songDetails.artist),
-          curator: new PublicKey(songDetails.curator),
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
+      // // Build the instruction
+      // // @ts-ignore
+      // const buyIx = await program!.methods!
+      //   .buySong()
+      //   .accounts({
+      //     buyer: publicKey,
+      //     song: songPda,
+      //     ownership: ownershipPda,
+      //     artist: new PublicKey(songDetails.artist),
+      //     curator: new PublicKey(songDetails.curator),
+      //     systemProgram: SystemProgram.programId,
+      //   })
+      //   .instruction();
+
+      const buyIx = await createBuySongInstruction(
+        program,
+        songDetails.mint,
+        publicKey, // The buyer is the connected wallet
+        new PublicKey(songDetails.artist),
+        new PublicKey(songDetails.curator)
+      );
 
       const transaction = new Transaction().add(buyIx);
 
@@ -281,6 +292,8 @@ const SongPage = () => {
               >
                 {isProcessing ? "Processing..." : (publicKey ? `Stream Once for ${streamPriceSol} SOL` : "Connect Wallet to Stream")}
               </button>
+
+              <Button onClick={() => blink(songDetails)}>Share via Blink</Button>
             </div>
           </div>
         )}

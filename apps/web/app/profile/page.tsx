@@ -207,7 +207,7 @@ export default function ProfilePage() {
                           <p className="text-sm text-muted-foreground">{symbol}</p>
                         </CardContent>
                         <CardFooter>
-                          <Button onClick={() => blink()}>Share via Blink</Button>
+                          {/* <Button onClick={() => blink()}>Share via Blink</Button> */}
                         </CardFooter>
                       </Card>
                     );
