@@ -9,6 +9,8 @@ import SpotlightCard from '@/components/react-bits/SpotlightCard';
 import Aurora from '@/components/react-bits/Aurora';
 import Beams from '@/components/react-bits/Beams';
 
+import Connect from './Connect';
+
 // If using reactbits: import components directly after installation
 // import { CircularText } from 'react-bits/text-animations';
 // import { SpotlightCard } from 'react-bits/components';
@@ -29,8 +31,8 @@ export default function LandingPage() {
       {/* Background layers: beams + aurora (replace with reactbits components if installed) */}
       <div className="pointer-events-none absolute inset-0 opacity-30">
         <Beams />
-        <Aurora />
-        <div className="bg-gradient-to-b from-[#0f0f1a] via-black to-black w-full h-full" />
+        {/* <Aurora /> */}
+        {/* <div className="bg-gradient-to-b from-[#0f0f1a] via-black to-black w-full h-full" /> */}
       </div>
 
       {/* Top nav */}
@@ -47,9 +49,9 @@ export default function LandingPage() {
           >
             Get Started
           </Button>
-          <Button className="bg-white text-black hover:bg-neutral-200 transition-colors">
-            Connect Wallet
-          </Button>
+          {/* <Button className="bg-white text-black hover:bg-neutral-200 transition-colors"> */}
+            <Connect />
+          {/* </Button> */}
         </div>
       </header>
 
@@ -69,7 +71,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex gap-4">
               <Button
-                className="bg-purple-500 hover:bg-purple-400 transition-colors"
+                className=" hover:bg-purple-400 transition-colors"
                 onClick={() => router.push('/upload')}
               >
                 Upload a song
@@ -85,12 +87,12 @@ export default function LandingPage() {
 
             {/* Circular text accent (swap to React Bits CircularText when installed) */}
             <div className="mt-10 inline-flex items-center justify-center relative">
-              <CircularText text="WEB3•COLOSSEUM•NFT•MUSIC•BLINKS•" spinDuration={20} onHover="speedUp" />
-              <div className="w-36 h-36 rounded-full border border-white/20 grid place-items-center">
+              <CircularText text=" Nikhilx • COLOSSEUM • MUSIC • BLINKS •" spinDuration={20} onHover="speedUp" />
+              {/* <div className="w-36 h-36 rounded-full border border-white/20 grid place-items-center">
                 <span className="text-xs text-neutral-400 tracking-widest">
                   WEB3 • COLOSSEUM • NFT • MUSIC • BLINKS
                 </span>
-              </div>
+              </div> */}
             </div>
           </div>
 

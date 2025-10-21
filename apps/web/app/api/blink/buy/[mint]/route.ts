@@ -94,7 +94,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { mint: string } }
 ) {
-  const { mint } = params;
+  const { mint } =  params;
   try {
     const { account } = await req.json(); 
     const buyerPublicKey = new PublicKey(account);

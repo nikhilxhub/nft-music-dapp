@@ -16,6 +16,9 @@ import { LogOut, Upload, User, User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
+import Connect from "./Connect";
+// import WalletConnect from "./WalletConnect";
+// import WalletConnect from "./WalletConnect";
 
 
 // Helper function to truncate wallet address
@@ -50,7 +53,7 @@ export function NavBar() {
 
         {/* Right side of Navbar */}
         <div className="flex flex-1 items-center justify-end space-x-4">
-          {connected && publicKey ? (
+          {/* {connected && publicKey ? (
             // --- CONNECTED STATE ---
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -87,7 +90,8 @@ export function NavBar() {
           ) : (
             // --- UNCONNECTED STATE ---
             <WalletMultiButton style={{}} />
-          )}
+          )} */}
+          <Connect />
 
             <ModeToggle />
         </div>
