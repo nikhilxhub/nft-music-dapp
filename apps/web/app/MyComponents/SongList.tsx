@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { SongCard } from "./SongCard";
+import { useEffect, useState } from 'react';
+import { SongCard } from './SongCard';
+import { MotionItem } from '@/components/ui/adapters';
+// import { MotionItem } from 'app/ui/adapters';
 
-// Define the shape of the song data coming from our database
 interface Song {
-  _id: string; // MongoDB adds this
+  _id: string;
   mint: string;
   artist: string;
   metadataUri: string;
@@ -17,14 +18,13 @@ export function SongList() {
 
   useEffect(() => {
     async function fetchSongs() {
-      // Your backend URL
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       try {
         const response = await fetch(`${API_BASE_URL}/songs`);
         const data: Song[] = await response.json();
         setSongs(data);
       } catch (error) {
-        console.error("Failed to fetch songs:", error);
+        console.error('Failed to fetch songs:', error);
       } finally {
         setIsLoading(false);
       }
@@ -43,7 +43,9 @@ export function SongList() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {songs.map((song) => (
-        <SongCard key={song._id} song={song} />
+        <MotionItem key={song._id}>
+          <SongCard song={song} />
+        </MotionItem>
       ))}
     </div>
   );
