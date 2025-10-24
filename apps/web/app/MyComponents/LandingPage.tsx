@@ -11,10 +11,6 @@ import Beams from '@/components/react-bits/Beams';
 
 import Connect from './Connect';
 
-// If using reactbits: import components directly after installation
-// import { CircularText } from 'react-bits/text-animations';
-// import { SpotlightCard } from 'react-bits/components';
-// import { Aurora, Beams } from 'react-bits/backgrounds';
 
 const features = [
   { title: 'Upload', desc: 'Artist uploads song. We normalize metadata.' },
