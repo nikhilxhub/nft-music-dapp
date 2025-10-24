@@ -13,6 +13,7 @@ import { SongCard } from "@/components/song/SongCard";
 // import { SongActions } from "@/components/song/SongActions";
 import { AudioPlayer } from "@/components/media/AudioPlayer";
 import { SongActions } from "@/components/song/SongActions";
+import { SongAnalytics } from "@/components/song/SongAnalytics";
 
 const programId = new PublicKey(idl.address);
 
@@ -53,6 +54,24 @@ export default function SongPage() {
     // @ts-ignore
     return new anchor.Program(idl as anchor.Idl, { connection });
   }, [connection]);
+  const [analytics, setAnalytics] = useState<{ totalPurchases: number; totalStreams: number } | null>(null);
+
+  useEffect(() => {
+    if (!mint) return;
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/songAnalytics/${mint}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAnalytics({ totalPurchases: data.totalPurchases, totalStreams: data.totalStreams });
+        }
+      } catch (e) {
+        console.error("Failed to fetch analytics", e);
+      }
+    };
+    fetchAnalytics();
+  }, [mint]);
+
 
   useEffect(() => {
     if (!mint) return;
@@ -211,37 +230,46 @@ export default function SongPage() {
 
   const canTransact = !!publicKey && !isProcessing;
 
-  return (
-    <div className="container mx-auto p-4">
-      <SongCard image={metadata.image} title={metadata.name} subtitle={`By ${songDetails.artist}`}>
-        {(hasAccess || tempAccess) ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium text-emerald-300">
-              {hasAccess ? "You own this song" : "Stream unlocked"}
-            </h2>
-            {audioFile ? (
-              <AudioPlayer src={audioFile.uri} autoPlay />
-            ) : (
-              <p className="text-red-400">Audio file not found in metadata.</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <h2 className="text-lg font-medium text-yellow-300">Get access</h2>
-            <p className="text-sm text-white/70">Buy permanently or pay per stream to listen.</p>
+return (
+  <div className="container mx-auto p-4">
+    <SongCard image={metadata.image} title={metadata.name} subtitle={`By ${songDetails.artist}`}>
+      {(hasAccess || tempAccess) ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-emerald-300">
+            {hasAccess ? "You own this song" : "Stream unlocked"}
+          </h2>
+          {audioFile ? (
+            <AudioPlayer src={audioFile.uri} autoPlay />
+          ) : (
+            <p className="text-red-400">Audio file not found in metadata.</p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <h2 className="text-lg font-medium text-yellow-300">Get access</h2>
+          <p className="text-sm text-white/70">Buy permanently or pay per stream to listen.</p>
+          <SongActions
+            buyLabel={`Buy permanently • ${buyPriceSol} SOL`}
+            streamLabel={`Stream once • ${streamPriceSol} SOL`}
+            isProcessing={isProcessing}
+            canTransact={canTransact}
+            onBuy={handleBuySong}
+            onStream={handleStreamSong}
+            onShare={() => blink(songDetails)}
+          />
+        </div>
+      )}
 
-            <SongActions
-              buyLabel={`Buy permanently • ${buyPriceSol} SOL`}
-              streamLabel={`Stream once • ${streamPriceSol} SOL`}
-              isProcessing={isProcessing}
-              canTransact={canTransact}
-              onBuy={handleBuySong}
-              onStream={handleStreamSong}
-              onShare={() => blink(songDetails)}
-            />
-          </div>
-        )}
-      </SongCard>
-    </div>
-  );
+      {/* Always show analytics */}
+      <div className="mt-6">
+        <SongAnalytics
+          totalPurchases={analytics?.totalPurchases ?? 0}
+          totalStreams={analytics?.totalStreams ?? 0}
+          loading={!analytics}
+        />
+      </div>
+    </SongCard>
+  </div>
+);
+
 }
