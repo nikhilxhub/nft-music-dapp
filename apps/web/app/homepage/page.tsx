@@ -34,7 +34,7 @@ export default function HomePage() {
                 <Button variant="primary" size="lg" onClick={() => router.push('/upload')}>
                   Upload song
                 </Button>
-                <Button variant="ghost" size="lg" onClick={() => router.push('/explore')}>
+                <Button variant="ghost" size="lg" onClick={() => router.push('/homepage')}>
                   Explore more
                 </Button>
               </div>

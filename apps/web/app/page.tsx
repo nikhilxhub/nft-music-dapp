@@ -9,11 +9,10 @@ export default function Home() {
   return (
     <div>
 
-      hello
+ 
 
       <LandingPage />
 
-      {/* <Button variant="ghost">heelo</Button> */}
     </div>
   );
 }

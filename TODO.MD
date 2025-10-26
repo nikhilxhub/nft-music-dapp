@@ -1,1 +1,1 @@
-my songs in profile section not working as expected its not getting nft image bcoz we using helius to get nft owned by user
+comments on each song
