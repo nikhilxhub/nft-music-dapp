@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import CircularText from '@/components/react-bits/CircularText';
 import SpotlightCard from '@/components/react-bits/SpotlightCard';
-import Aurora from '@/components/react-bits/Aurora';
-import Beams from '@/components/react-bits/Beams';
+
+import Beams from '@/components/Beams';
 
 import Connect from './Connect';
 
@@ -39,8 +39,7 @@ export default function LandingPage() {
       {/* Background layers: beams + aurora (replace with reactbits components if installed) */}
       <div className="pointer-events-none absolute inset-0 opacity-30">
         <Beams />
-        {/* <Aurora /> */}
-        {/* <div className="bg-gradient-to-b from-[#0f0f1a] via-black to-black w-full h-full" /> */}
+       
       </div>
 
       {/* Top nav */}

@@ -30,6 +30,7 @@ export function BitButton({
   }[variant];
 
   return (
+    // @ts-ignore
     <motion.button
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}

@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
 // import { blink } from "../utils/blinks"; // Your blink utility
 
 // --- Data Types ---
@@ -217,7 +218,7 @@ export default function ProfilePage() {
                     >
                       <Card className="overflow-hidden transition-shadow duration-200 hover:shadow-md">
                         <div className="relative aspect-square w-full">
-                          <img
+                          <Image
                             src={imageUrl}
                             alt={name}
                             className="h-full w-full object-cover"

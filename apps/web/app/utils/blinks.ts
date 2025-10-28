@@ -29,6 +29,7 @@ export const blink = (songDetails:SongDetails) => {
       toast.success("Blink link copied to clipboard! Share it.");
     },
     (err) => {
+      console.error("Clipboard copy failed:", err);
       toast.error("Failed to copy link.");
     }
   );

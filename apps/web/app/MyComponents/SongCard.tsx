@@ -72,7 +72,7 @@ export function SongCard({ song }: { song: Song }) {
   }
 
   // Optionally normalize ipfs:// to gateway at backend for Next/Image
-  const coverSrc = metadata.image;
+  // const coverSrc = metadata.image;
 
   return (
     <Link href={`/song/${song.mint}`} className="block focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded-2xl">

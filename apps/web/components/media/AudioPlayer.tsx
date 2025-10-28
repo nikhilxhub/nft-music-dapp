@@ -50,7 +50,7 @@ export function AudioPlayer({ src, autoPlay }: AudioPlayerProps) {
       audio.removeEventListener("ended", onEnd);
       audioRef.current = null;
     };
-  }, [src, autoPlay]);
+  }, [src, autoPlay,volume]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
@@ -140,6 +140,7 @@ function BitIconButton({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
+    // @ts-ignore
     <motion.button
       whileHover={{ scale: 1.05, y: -1 }}
       whileTap={{ scale: 0.97 }}

@@ -15,7 +15,7 @@ import { AudioPlayer } from "@/components/media/AudioPlayer";
 import { SongActions } from "@/components/song/SongActions";
 import { SongAnalytics } from "@/components/song/SongAnalytics";
 
-const programId = new PublicKey(idl.address);
+// const programId = new PublicKey(idl.address);
 
 interface SongDetails {
   mint: string;

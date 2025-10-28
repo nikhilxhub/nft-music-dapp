@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import Connect from "./Connect";
-import { Music, Menu, X, AudioWaveformIcon, Disc3,  PlayCircle, Headphones } from "lucide-react";
+import {  Menu, X, AudioWaveformIcon } from "lucide-react";
 
 /**
  * Custom hook to check if the component has mounted.

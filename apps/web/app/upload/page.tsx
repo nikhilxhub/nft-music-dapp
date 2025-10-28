@@ -25,8 +25,7 @@ import { formSchema, FormValues } from "../utils/formSchema";
 
 
 
-// ---------------- Component ----------------
-const programId = new PublicKey(idl.address);
+// const programId = new PublicKey(idl.address);
 
 export default function UploadPage() {
   const wallet = useWallet();
@@ -148,7 +147,7 @@ export default function UploadPage() {
 
       const mint = generateSigner(umi);
 
-      let createNftTx = createNft(umi, {
+      const createNftTx = createNft(umi, {
         mint,
         name: metadata.name,
         uri: metadataUrl,
