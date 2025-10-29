@@ -22,6 +22,7 @@ import { useForm } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formSchema, FormValues } from "../utils/formSchema";
+import Image from "next/image";
 
 
 
@@ -42,6 +43,7 @@ export default function UploadPage() {
     register,
     handleSubmit: formHandleSubmit,
     formState: { errors },
+    watch
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,6 +55,10 @@ export default function UploadPage() {
       imageUrl: "",
     },
   });
+
+  const imageUrl = watch("imageUrl");
+  const title = watch("title");
+  const curator = watch("curator");
 
   // === keep this unchanged as requested ===
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,10 +331,12 @@ export default function UploadPage() {
     <>
       <NavBar />
       <div className="container flex items-center justify-center py-12">
-        <Card className="w-full max-w-lg">
+        <Card className="w-full max-w-5xl">
           <CardHeader>
             <CardTitle>Upload a New Song</CardTitle>
-            <CardDescription>Fill in the details, mint the song as an NFT, and register it on-chain.</CardDescription>
+            <CardDescription>
+              Fill in the details, mint the song as an NFT, and register it on‑chain.
+            </CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -336,59 +344,142 @@ export default function UploadPage() {
               <div className="flex flex-col items-center justify-center space-y-4">
                 <p className="text-sm font-medium">{progressText}</p>
                 <Progress value={progress} className="w-full" />
-                <p className="text-xs text-muted-foreground">Please approve the transactions in your wallet.</p>
+                <p className="text-xs text-muted-foreground">
+                  Please approve the transactions in your wallet.
+                </p>
               </div>
             ) : (
-              <form onSubmit={formHandleSubmit(handleSubmit)} className="space-y-4">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="title">Song Title</Label>
-                  <Input id="title" {...register("title")} placeholder="My new hit song" />
-                  {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left column: form */}
+                <form
+                  onSubmit={formHandleSubmit(handleSubmit)}
+                  className="space-y-4"
+                >
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="title">Song Title</Label>
+                    <Input
+                      id="title"
+                      {...register("title")}
+                      placeholder="My new hit song"
+                    />
+                    {errors.title && (
+                      <p className="text-red-500 text-xs">{errors.title.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="curator">Curator Wallet Address</Label>
-                  <Input id="curator" {...register("curator")} placeholder="Wallet address" />
-                  {errors.curator && <p className="text-red-500 text-xs">{errors.curator.message}</p>}
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="curator">Curator Wallet Address</Label>
+                    <Input
+                      id="curator"
+                      {...register("curator")}
+                      placeholder="Wallet address"
+                    />
+                    {errors.curator && (
+                      <p className="text-red-500 text-xs">{errors.curator.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="curatorShare">Curator Share (%)</Label>
-                  <Input id="curatorShare" type="number" {...register("curatorShare", { valueAsNumber: true })} />
-                  {errors.curatorShare && <p className="text-red-500 text-xs">{errors.curatorShare.message}</p>}
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="curatorShare">Curator Share (%)</Label>
+                    <Input
+                      id="curatorShare"
+                      type="number"
+                      {...register("curatorShare", { valueAsNumber: true })}
+                    />
+                    {errors.curatorShare && (
+                      <p className="text-red-500 text-xs">{errors.curatorShare.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="streamPrice">Stream Price (SOL)</Label>
-                  <Input id="streamPrice" type="number" step="0.0001" {...register("streamPrice", { valueAsNumber: true })} />
-                  {errors.streamPrice && <p className="text-red-500 text-xs">{errors.streamPrice.message}</p>}
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="streamPrice">Stream Price (SOL)</Label>
+                    <Input
+                      id="streamPrice"
+                      type="number"
+                      step="0.0001"
+                      {...register("streamPrice", { valueAsNumber: true })}
+                    />
+                    {errors.streamPrice && (
+                      <p className="text-red-500 text-xs">{errors.streamPrice.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="buyPrice">Buy Price (SOL)</Label>
-                  <Input id="buyPrice" type="number" step="0.01" {...register("buyPrice", { valueAsNumber: true })} />
-                  {errors.buyPrice && <p className="text-red-500 text-xs">{errors.buyPrice.message}</p>}
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="buyPrice">Buy Price (SOL)</Label>
+                    <Input
+                      id="buyPrice"
+                      type="number"
+                      step="0.01"
+                      {...register("buyPrice", { valueAsNumber: true })}
+                    />
+                    {errors.buyPrice && (
+                      <p className="text-red-500 text-xs">{errors.buyPrice.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input id="imageUrl" type="url" {...register("imageUrl")} placeholder="https://example.com/cover.jpg" />
-                  {errors.imageUrl && <p className="text-red-500 text-xs">{errors.imageUrl.message}</p>}
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      type="url"
+                      {...register("imageUrl")}
+                      placeholder="https://example.com/cover.jpg"
+                    />
+                    {errors.imageUrl && (
+                      <p className="text-red-500 text-xs">{errors.imageUrl.message}</p>
+                    )}
+                  </div>
 
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="audio">Audio File (MP3, WAV)</Label>
-                  <Input id="audio" type="file" accept="audio/*" onChange={handleFileChange} required />
-                </div>
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="audio">Audio File (MP3, WAV)</Label>
+                    <Input
+                      id="audio"
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleFileChange}
+                      required
+                    />
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={!wallet.connected}>
-                  {wallet.connected ? "Start Upload Process" : "Connect Wallet to Upload"}
-                </Button>
-              </form>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!wallet.connected}
+                  >
+                    {wallet.connected
+                      ? "Start Upload Process"
+                      : "Connect Wallet to Upload"}
+                  </Button>
+                </form>
+
+                {/* Right column: live preview */}
+                <div className="flex flex-col items-center justify-start space-y-4">
+                  <div className="relative w-64 h-64 rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+                    {imageUrl ? (
+                      <Image
+                        src={imageUrl}
+                        alt="Preview"
+                        fill
+                        className="object-cover transition-transform duration-300 hover:scale-105 animate-fadeIn"
+                      />
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Cover preview</span>
+                    )}
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <p className="font-semibold">{title || "Song Title"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {curator || "Curator Wallet"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
     </>
+
   );
 }

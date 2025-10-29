@@ -51,7 +51,7 @@ export function NavBar() {
             >
               <AudioWaveformIcon />
               <span className="font-semibold text-lg text-primary group-hover:text-primary/90 transition-colors">
-                BlinkTune
+                BlinkTunes
               </span>
             </Button>
 
