@@ -1,12 +1,16 @@
 'use client';
 
-import {  GrainBackground, GlowCard, BadgePill, Button, MotionFadeIn} from '@/components/ui/adapters';
+import { GrainBackground, GlowCard, BadgePill, Button, MotionFadeIn } from '@/components/ui/adapters';
 import { NavBar } from 'app/MyComponents/NavBar';
 import { SongList } from 'app/MyComponents/SongList';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { SkewLoader } from 'react-spinners';
 
 export default function HomePage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
 
   return (
     <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--fg)]">
@@ -31,7 +35,13 @@ export default function HomePage() {
                 Upload a track, mint on-chain, share on X with a blink.
               </p>
               <div className="flex gap-3">
-                <Button variant="primary" size="lg" onClick={() => router.push('/upload')}>
+                <Button variant="primary" size="lg"
+                  onClick={() => {
+                    setLoading(true);
+                    router.push('/upload');
+                  }}
+                >
+
                   Upload song
                 </Button>
                 <Button variant="ghost" size="lg" onClick={() => router.push('/homepage')}>
@@ -42,6 +52,13 @@ export default function HomePage() {
           </GlowCard>
 
           <SongList />
+
+          {loading && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+              <SkewLoader color="#5db8ff
+" size={30} />
+            </div>
+          )}
         </section>
       </main>
     </div>

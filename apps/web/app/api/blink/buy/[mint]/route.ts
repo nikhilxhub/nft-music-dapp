@@ -1,14 +1,15 @@
 import {
   Connection,
   PublicKey,
-  TransactionMessage,
-  VersionedTransaction,
+  Transaction,
+  TransactionInstruction,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import {
   ActionGetResponse,
   ActionPostRequest,
+  ActionPostResponse,
   ACTIONS_CORS_HEADERS,
   createPostResponse,
 } from "@solana/actions";
@@ -50,11 +51,11 @@ export async function GET(request: any, context: any) {
     const buyPriceSol = data.song.buyLamports / LAMPORTS_PER_SOL;
 
     const metadata: ActionGetResponse = {
-  icon: data.metadata.image,
-  title: `Buy "${data.metadata.name}"`,
-  description: `Buy this song for ${buyPriceSol} SOL.`,
-  label: `Buy for ${buyPriceSol} SOL`,
-};
+      icon: data.metadata.image,
+      title: `Buy ${data.metadata.name}`,
+      description: `Buy this song for ${buyPriceSol} SOL.`,
+      label: `Buy for ${buyPriceSol} SOL`,
+    };
 
     return NextResponse.json(metadata, { headers: CORS_HEADERS });
   } catch (error) {
@@ -87,11 +88,11 @@ export async function POST(request: any, context: any) {
     /* ---------------------- 2️⃣ Solana + Anchor setup ----------------------- */
     const connection = new Connection(HELIUS_RPC_URL, "confirmed");
 
-    // Dummy wallet (server doesn’t sign; client will)
+    // Dummy wallet — server does not sign; client will sign.
     const dummyWallet = {
       publicKey: buyer,
-      signTransaction: async (tx: any) => tx,
-      signAllTransactions: async (txs: any) => txs,
+      signTransaction: async (tx: Transaction) => tx,
+      signAllTransactions: async (txs: Transaction[]) => txs,
     };
 
     const provider = new AnchorProvider(connection, dummyWallet as any, {
@@ -110,7 +111,8 @@ export async function POST(request: any, context: any) {
     if (!song || !metadata) throw new Error("Invalid song data");
 
     /* ---------------------- 4️⃣ Build buy instruction ----------------------- */
-    const buyIx = await createBuySongInstruction(
+    // createBuySongInstruction should return a TransactionInstruction
+    const buyIx: TransactionInstruction = await createBuySongInstruction(
       program,
       song.mint,
       buyer,
@@ -118,38 +120,38 @@ export async function POST(request: any, context: any) {
       new PublicKey(song.curator)
     );
 
-    // Ensure buyer is signer
+    // Ensure the buyer key is listed as a signer in the instruction keys.
+    // (The client wallet will actually sign the transaction.)
     buyIx.keys = buyIx.keys.map((k) =>
       k.pubkey.equals(buyer) ? { ...k, isSigner: true } : k
     );
 
-    /* ---------------------- 5️⃣ Create transaction (v0) ---------------------- */
-    const latestBlockhash = await connection.getLatestBlockhash();
-    const message = new TransactionMessage({
-      payerKey: buyer,
-      recentBlockhash: latestBlockhash.blockhash,
-      instructions: [buyIx],
-    }).compileToV0Message();
+    /* ---------------------- 5️⃣ Create legacy Transaction ------------------ */
+    const latest = await connection.getLatestBlockhash("finalized");
+    const tx = new Transaction();
+    tx.add(buyIx);
 
-    const transaction = new VersionedTransaction(message);
+    // Set fee payer and recent blockhash so Phantom and other wallets can send
+    tx.feePayer = buyer;
+    tx.recentBlockhash = latest.blockhash;
 
     /* ---------------------- 6️⃣ Return Solana Action response ---------------- */
-    const actionResponse = await createPostResponse({
+    const actionResponse:ActionPostResponse = await createPostResponse({
       fields: {
-        type: "transaction",
-        transaction,
+        type: "transaction", // 👈 required for correct type
+        transaction: tx,
         message: "Sign to buy the song",
       },
     });
 
-    // Attach CORS headers for dial.to / cross-origin callers (re-wrap response)
+
     return NextResponse.json(actionResponse, { headers: CORS_HEADERS });
   } catch (err: any) {
     console.error("BuySong POST error:", err);
     return new NextResponse(
       JSON.stringify({
         error: "Failed to create transaction",
-        message: err.message,
+        message: err?.message ?? String(err),
       }),
       { status: 500, headers: CORS_HEADERS }
     );

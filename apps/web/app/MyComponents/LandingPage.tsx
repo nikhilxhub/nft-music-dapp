@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import CircularText from '@/components/react-bits/CircularText';
 import SpotlightCard from '@/components/react-bits/SpotlightCard';
+import { RiseLoader, SkewLoader } from 'react-spinners';
 
 import Beams from '@/components/Beams';
+import logo from '@/public/ChatGPT Image Oct 29, 2025, 01_20_17 AM.png';
 
 import Connect from './Connect';
 
@@ -33,8 +35,10 @@ const trendingTracks = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   return (
+    
     <div className="relative min-h-screen bg-black text-white">
       {/* Background layers: beams + aurora (replace with reactbits components if installed) */}
       <div className="pointer-events-none absolute inset-0 opacity-30">
@@ -45,17 +49,20 @@ export default function LandingPage() {
       {/* Top nav */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <Image src="/logo.svg" alt="SkyTunes" width={28} height={28} />
-          <span className="text-sm tracking-widest uppercase text-neutral-300">SkyTunes</span>
+          <Image className="hidden md:block logo-img" src={logo} alt="BlinkTunes logo" width={150} height={180} />
+          <span className="text-sm tracking-widest uppercase text-neutral-300">BlinkTunes</span>
         </div>
         <div className="flex items-center gap-3">
           <Button
-            variant="ghost"
-            className="hover:bg-white/10 transition-colors"
-            onClick={() => router.push('/homepage')}
-          >
-            Get Started
-          </Button>
+  variant="ghost"
+  className="hover:bg-white/10 transition-colors"
+  onClick={() => {
+    setLoading(true);
+    router.push('/homepage');
+  }}
+>
+  Get Started
+</Button>
           {/* <Button className="bg-white text-black hover:bg-neutral-200 transition-colors"> */}
           <Connect />
           {/* </Button> */}
@@ -195,6 +202,13 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+    
+          {loading && (
+  <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+    <SkewLoader color="#5db8ff" size={30} />
+  </div>
+)}
+
     </div>
   );
 }

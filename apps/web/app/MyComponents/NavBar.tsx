@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ModeToggle } from "@/components/ui/ModeToggle";
 import Connect from "./Connect";
-import {  Menu, X, AudioWaveformIcon } from "lucide-react";
+import { Menu, X, AudioWaveformIcon } from "lucide-react";
+import { SkewLoader } from "react-spinners";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 /**
  * Custom hook to check if the component has mounted.
@@ -18,6 +21,9 @@ function useHasMounted() {
 }
 
 export function NavBar() {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const hasMounted = useHasMounted();
 
@@ -26,38 +32,55 @@ export function NavBar() {
   // Prevent hydration mismatch
   if (!hasMounted) return null;
 
+
   return (
-    
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <>
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
-        {/* Left Side: Logo and Desktop Navigation */}
-        <div className="flex items-center gap-6">
-          {/* App Logo/Name */}
-          <Link href="/" className="flex items-center space-x-2 group" onClick={closeMobileMenu}>
-            {/* <Music className="h-6 w-6 text-primary transition-transform group-hover:scale-110" /> */}
-            <AudioWaveformIcon />
-
-            <span className="font-semibold text-lg text-primary group-hover:text-primary/90 transition-colors">
-              BlinkTune
-            </span>
-          </Link>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex gap-4">
-            <Link
-              href="/discover"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          {/* Left Side: Logo and Desktop Navigation */}
+          <div className="flex items-center gap-6">
+            {/* App Logo/Name */}
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setLoading(true);
+                router.push('/');
+              }}
+              className="flex items-center space-x-2 group"
             >
-              Discover
-            </Link>
-            <Link
-              href="/profile"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              profile
-            </Link>
-          </nav>
+              <AudioWaveformIcon />
+              <span className="font-semibold text-lg text-primary group-hover:text-primary/90 transition-colors">
+                BlinkTune
+              </span>
+            </Button>
+
+
+            {/* Desktop Navigation Links */}
+            <nav className="hidden md:flex gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setLoading(true);
+                  router.push('/discover');
+                }}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              >
+                Discover
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setLoading(true);
+                  router.push('/profile');
+                }}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              >
+                profile
+              </Button>
+
+              
+            </nav>
         </div>
 
         {/* Right Side: Actions and Mobile Menu Button */}
@@ -102,7 +125,7 @@ export function NavBar() {
             >
               My Music
             </Link>
-            
+
             {/* Separator */}
             <div className="pt-4 pb-2">
               <div className="border-t border-border/40" />
@@ -121,6 +144,18 @@ export function NavBar() {
           </nav>
         </div>
       )}
-    </header>
+
+
+
+    </header >
+
+      { loading && (
+        <div className="fixed inset-0 z-[999] bg-black/80 flex items-center justify-center">
+          <SkewLoader color="#5db8ff" size={30} />
+        </div>
+      )
+}
+    </>
+
   );
 }

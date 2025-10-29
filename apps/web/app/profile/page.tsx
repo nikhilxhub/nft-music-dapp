@@ -71,6 +71,7 @@ export default function ProfilePage() {
   // Correctly typed state to match the API response
   const [myNfts, setMyNfts] = useState<NftAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  
 
   useEffect(() => {
     if (!publicKey) {
