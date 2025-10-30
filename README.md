@@ -1,136 +1,214 @@
-# Turborepo starter
+# 🎧 BlinkTunes— Web3 Music Platform on Solana
 
-This Turborepo starter is maintained by the Turborepo core team.
+A decentralized music application that empowers **artists to mint songs as NFTs**, and allows **listeners to stream or purchase songs** with true digital ownership — powered by **Solana, Metaplex, and IPFS**.
 
-## Using this example
+---
 
-Run the following command:
+## 🚀 Overview
 
-```sh
-npx create-turbo@latest
+**BlinkTunes** bridges the gap between artists and fans by enabling creators to upload, own, and monetize their music directly on-chain.
+
+- 🎵 **Upload & Mint** — Artists can upload songs, which are stored on IPFS and minted as NFTs on Solana using Metaplex.
+- 💰 **Buy & Stream** — Listeners can purchase tracks to unlock unlimited streaming.
+- 🔗 **On-chain + Off-chain Hybrid Architecture** — Critical logic runs on Solana (Anchor program), while off-chain services like MongoDB handle analytics and streaming history.
+- 🪄 **Modern Stack** — Built using **Next.js**, **Node.js (Express)**, **Rust (Anchor)**, and **Turborepo** for a scalable fullstack setup.
+
+---
+
+## 🧩 Repository Structure
+
+This project uses **Turborepo** with multiple apps managed by `pnpm`.
+
+
+> 🔗 **Smart Contract Repository:**  
+> [Rust Anchor Program Repository](https://github.com/nikhilxhub/nft-music-dapp-contract) 
+---
+
+## 🏗️ Architecture Overview
+
+```text
+Artist/Listener
+     ↓
+Frontend (Next.js)
+     ↓
+Backend (Express API)
+     ↓
+Database (MongoDB)
+     ↓
+Storage (IPFS / Arweave)
+     ↓
+Blockchain (Solana + Anchor)
+
+
+---
+
+## Environment Setup
+
+```text
+Create an .env file in both apps/web and apps/backend directories.
+Sure — here’s your **complete README.md** file for the **BlinkTunes Web3 Music DApp**, fully formatted in Markdown and ready to paste directly into your repo 👇
+
+---
+
+
+### 1️⃣ Prerequisites
+
+* Node.js >= 18
+* pnpm (package manager)
+* Docker (optional for MongoDB)
+* Phantom wallet (for Solana Devnet testing)
+* Solana CLI configured for Devnet
+
+---
+
+### 2️⃣ Environment Variables
+
+Create a `.env` file in both **`apps/web`** and **`apps/backend`** directories.
+
+#### **apps/backend/.env**
+
+```env
+PORT=3001
+MONGO_URI=mongodb://localhost:27017/nft-music
+HELIUS_WEBHOOK_SECRET=replace_with_secret
+PINATA_JWT=replace_with_pinata_jwt
+SOLANA_RPC_URL=https://api.devnet.solana.com
+ADMIN_KEYPAIR_PATH=./admin-keypair.json
+HELIUS_API_KEY=replace_with_api_key
 ```
 
-## What's inside?
+#### **apps/web/.env**
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_SOLANA_NETWORK=devnet
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+## 🧱 Installation & Running Locally
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+### 1️⃣ Clone the repository
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```bash
+git clone https://github.com/nikhilxhub/nft-music-dapp.git
+cd nft-music-dapp
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### 2️⃣ Install dependencies
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+pnpm install
 ```
 
-### Remote Caching
+### 3️⃣ Start MongoDB locally (or via Docker)
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+docker run -d -p 27017:27017 --name mongodb mongo
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### 4️⃣ Run the backend
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+```bash
+cd apps/backend
+pnpm dev
 ```
 
-## Useful Links
+### 5️⃣ Run the frontend
 
-Learn more about the power of Turborepo:
+```bash
+cd apps/web
+pnpm dev
+```
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
-# nft-music-dapp
+App runs on:
+
+* **Frontend:** [http://localhost:3000](http://localhost:3000)
+* **Backend:** [http://localhost:3001](http://localhost:3001)
+
+---
+
+## 🎵 Core Features
+
+| Feature                    | Description                                              |
+| -------------------------- | -------------------------------------------------------- |
+| 🎤 **Song Upload**         | Artists upload music which is pinned to IPFS via Pinata  |
+| 🪙 **NFT Minting**         | Each song is minted as an NFT using Metaplex             |
+| 💰 **Buy & Stream**        | Users can purchase songs and stream them indefinitely    |
+| 🧾 **Purchase History**    | Stored off-chain in MongoDB                              |
+| ⚙️ **Anchor Integration**  | Smart contract handles song initialization and ownership |
+| 📈 **Streaming Analytics** | Tracks streams and purchases for insights                |
+| 🔗 **Blink Sharing**       | Share unique song links with others                      |
+
+---
+
+## 🧠 Major Technical Decisions
+
+* **Solana Integration:** Used **Rust + Anchor** for program logic ensuring on-chain security.
+* **Metaplex SDK:** Frontend uses Metaplex JS for NFT minting and metadata creation.
+* **IPFS (Pinata):** Permanent, decentralized storage for audio and metadata.
+* **Helius Webhooks:** Real-time tracking of on-chain events like NFT minting and song purchases.
+* **MongoDB:** For user-level analytics, streaming counts, and purchases — scalable off-chain solution.
+
+---
+
+## 🧩 Folder Responsibilities
+
+| Folder          | Description                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| `/apps/web`     | Next.js frontend with wallet adapter, IPFS integration, and player UI                      |
+| `/apps/backend` | Express backend with REST APIs for uploads, song metadata, and blockchain interactions     |
+| `/packages/`    | Shared utility code or types across web and backend                                        |
+| `/contracts/`   | [Moved to Rust Anchor Program Repo](https://github.com/nikhilxhub/nft-music-dapp-contract) |
+
+---
+
+## 🧰 Tech Stack
+
+* **Frontend:** Next.js + TypeScript + Tailwind
+* **Backend:** Node.js + Express + MongoDB
+* **Blockchain:** Solana + Anchor + Metaplex
+* **Storage:** IPFS / Arweave via Pinata
+* **Infra:** Turborepo + pnpm + Docker
+
+---
+
+## 🔒 Security Considerations
+
+* Private keys and secrets are **never committed** — stored in `.env`.
+* All uploads validated before IPFS pinning.
+* NFT metadata follows Metaplex JSON schema for compatibility.
+* Backend verifies all webhooks from Helius via `HELIUS_WEBHOOK_SECRET`.
+
+---
+
+## 🧭 Roadmap
+
+* [ ] Add royalties split among collaborators
+* [ ] Enable audio NFT resale on secondary markets
+* [ ] Add playlist and social sharing features
+* [ ] Integrate on-chain stream tracking with compression
+* [ ] Launch on Mainnet Beta
+
+---
+
+## 🧑‍💻 Authors
+
+**Team BlinkTunes**
+Built with ❤️ for the Solana Hackathon
+
+* Nikhil Ummidi — Fullstack & Solana Developer
+* [Add other teammates if any]
+
+---
+
+## 📜 License
+
+MIT License © 2025 BlinkTunes Team
+
+```
+
+
+
+
+
