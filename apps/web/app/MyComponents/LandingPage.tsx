@@ -93,7 +93,7 @@ export default function LandingPage() {
               <Button
                 variant="ghost"
                 className="hover:bg-white/10 transition-colors"
-                onClick={() => router.push('/explore')}
+                onClick={() => router.push('/homepage')}
               >
                 Explore tracks
               </Button>
